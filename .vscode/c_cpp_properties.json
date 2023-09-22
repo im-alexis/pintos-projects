@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "name": "Pintos",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "USERPROG", "VM", "FILESYS"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "intelliSenseMode": "linux-gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "c++14"
+        }
+    ],
+    "version": 4
+}

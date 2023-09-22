@@ -18,6 +18,8 @@ syscall_handler(struct intr_frame *f UNUSED)
 {
     /* Remove these when implementing syscalls */
     printf("system call!\n");
+    // 2. given an interupt frame, arguments go to stack. so grab it and the arg goes on 0
+    // do a giant switch case statement
 
     thread_exit();
 }

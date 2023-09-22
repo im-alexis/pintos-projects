@@ -87,7 +87,8 @@ struct thread {
     uint8_t           *stack;    /* Saved stack pointer. */
     int                priority; /* Priority. */
     struct list_elem   allelem;  /* List element for all threads list. */
-
+// int waitedon -> useful for just storing a lot of infomation, anything that needs to add status. including file description
+// make a hunch 28 file... something
     /* Shared between thread.c and synch.c. */
     struct list_elem elem; /* List element. */
 

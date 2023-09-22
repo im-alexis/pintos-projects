@@ -94,7 +94,7 @@ static tid_t allocate_tid(void);
  * It is not safe to call thread_current() until this function
  * finishes. */
 void
-thread_init(void)
+thread_init(void) // 4. we can do the suma init here
 {
     ASSERT(intr_get_level() == INTR_OFF);
 
