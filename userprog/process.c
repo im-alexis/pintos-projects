@@ -84,7 +84,10 @@ start_process(void *file_name_)
     {
         thread_exit();
     }
+    // 1. set up stack here!!! 
 
+
+    
     /* Start the user process by simulating a return from an
      * interrupt, implemented by intr_exit (in
      * threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -213,7 +216,7 @@ struct Elf32_Phdr
 #define PF_W 2 /* Writable. */
 #define PF_R 4 /* Readable. */
 
-static bool setup_stack(void **esp);
+static bool setup_stack(void **esp, int argc, char  argv[]);
 
 static bool validate_segment(const struct Elf32_Phdr *, struct file *);
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, uint32_t zero_bytes, bool writable);
@@ -231,6 +234,8 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     off_t file_ofs;
     bool success = false;
     int i;
+
+
 
     /* Allocate and activate page directory. */
     t->pagedir = pagedir_create();
@@ -320,9 +325,18 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
             break;
         }
     }
+    char* holder, token;
+    char args[24];
+    int counter =0;
+    holder = file_name;
+    while(token = strtok_r(NULL, " ", &holder)){
+        
+        args[counter] = token;
+        counter++;
+    }
 
     /* Set up stack. */
-    if (!setup_stack(esp))
+    if (!setup_stack(esp, counter, args))
     {
         goto done;
     }
@@ -469,8 +483,11 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
  * user virtual memory. */
 static bool
-setup_stack(void **esp)
+setup_stack(void **esp, int argc, char argv[] )
 {
+
+   
+   
     uint8_t *kpage;
     bool success = false;
 
@@ -481,9 +498,54 @@ setup_stack(void **esp)
     {
         success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true);
         if (success)
+        // {
+        //     *esp = PHYS_BASE;
+        // }
+          {
+   
+        /* Offset PHYS_BASE as instructed. */
+        *esp = PHYS_BASE - 12;
+        /* A list of addresses to the values that are initially added to the stack.  */
+        uint32_t * arg_value_pointers[argc];
+
+        /* First add all of the command line arguments in descending order, including
+           the program name. */
+        for(int i = argc-1; i >= 0; i--)
         {
-            *esp = PHYS_BASE;
+          /* Allocate enough space for the entire string (plus an extra byte for
+             '/0'). Copy the string to the stack, and add its reference to the array
+              of pointers. */
+          *esp = *esp - sizeof(char)*(strlen(argv[i])+1);
+          memcpy(*esp, argv[i], sizeof(char)*(strlen(argv[i])+1));
+          arg_value_pointers[i] = (uint32_t *)*esp;
         }
+        /* Allocate space for & add the null sentinel. */
+        *esp = *esp - 4;
+        (*(int *)(*esp)) = 0;
+
+        /* Push onto the stack each char* in arg_value_pointers[] (each of which
+           references an argument that was previously added to the stack). */
+        *esp = *esp - 4;
+        for(int i = argc-1; i >= 0; i--)
+        {
+          (*(uint32_t **)(*esp)) = arg_value_pointers[i];
+          *esp = *esp - 4;
+        }
+
+        /* Push onto the stack a pointer to the pointer of the address of the
+           first argument in the list of arguments. */
+        (*(uintptr_t **)(*esp)) = *esp + 4;
+
+        /* Push onto the stack the number of program arguments. */
+        *esp = *esp - 4;
+        *(int *)(*esp) = argc;
+
+        /* Push onto the stack a fake return address, which completes stack initialization. */
+        *esp = *esp - 4;
+        (*(int *)(*esp)) = 0;
+      }
+
+        
         else
         {
             palloc_free_page(kpage);
@@ -491,8 +553,7 @@ setup_stack(void **esp)
         // hex_dump( *(int*)esp, *esp, 128, true ); // NOTE: uncomment this to check arg passing
     }
     // start here!
-    // No arguments:
-    *esp = *esp - 12;
+
 
     return success;
 }

@@ -10,7 +10,7 @@
 
 Javier Padilla javierpadilla@utexas.edu
 Alexis Torress alexistorres@utexas.edu
-Guadalupe Melendez guadalupemelendez@utexas.edu
+Guadalupe Melendez guadalupe.melendez@austin.utexas.edu
 
 FirstName LastName <email@utexas.edu>
 
