@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -100,11 +101,17 @@ struct thread
     /*
 
         1.need two semaphores (one for waiting on the child and the one to read the exit status)
-        2.file descriptor table
+
+        2.file descriptor table and some to keep track
         3.current running thread? maybe
         4.has been waited on flag
 
     */
+    struct semaphore exit;
+    struct semaphore reading_status;
+
+    struct list_elem file_descriptor_table; // should put in files
+    int fdt_index;
 
 #endif
 

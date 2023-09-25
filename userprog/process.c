@@ -111,6 +111,11 @@ start_process(void *file_name_)
  * does nothing. */
 int process_wait(tid_t child_tid UNUSED)
 {
+    struct thread *cur = thread_current();
+
+    sema_down(&cur->exit);
+    sema_up(&cur->reading_status);
+
     while (1)
         ;
     return -1;
@@ -250,7 +255,12 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     char args[24];
     int counter = 0;
     holder = file_name;
-    while (token = strtok_r(holder, " ", &holder))
+
+    token = strtok_r(holder, " ", &holder);
+    args[counter] = token;
+    counter++;
+
+    while (token = strtok_r(NULL, " ", &holder))
     {
         args[counter] = token;
         counter++;
