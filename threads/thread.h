@@ -6,7 +6,8 @@
 #include <stdint.h>
 
 /* States in a thread's life cycle. */
-enum thread_status {
+enum thread_status
+{
     THREAD_RUNNING, /* Running thread. */
     THREAD_READY,   /* Not running but ready to run. */
     THREAD_BLOCKED, /* Waiting for an event to trigger. */
@@ -19,9 +20,9 @@ typedef int tid_t;
 #define TID_ERROR ((tid_t)-1) /* Error value for tid_t. */
 
 /* Thread priorities. */
-#define PRI_MIN     0  /* Lowest priority. */
+#define PRI_MIN 0      /* Lowest priority. */
 #define PRI_DEFAULT 31 /* Default priority. */
-#define PRI_MAX     63 /* Highest priority. */
+#define PRI_MAX 63     /* Highest priority. */
 
 /* A kernel thread or user process.
  *
@@ -79,22 +80,32 @@ typedef int tid_t;
  * only because they are mutually exclusive: only a thread in the
  * ready state is on the run queue, whereas only a thread in the
  * blocked state is on a semaphore wait list. */
-struct thread {
+struct thread
+{
     /* Owned by thread.c. */
-    tid_t              tid;      /* Thread identifier. */
-    enum thread_status status;   /* Thread state. */
-    char               name[16]; /* Name (for debugging purposes). */
-    uint8_t           *stack;    /* Saved stack pointer. */
-    int                priority; /* Priority. */
-    struct list_elem   allelem;  /* List element for all threads list. */
-// int waitedon -> useful for just storing a lot of infomation, anything that needs to add status. including file description
-// make a hunch 28 file... something
+    tid_t tid;                 /* Thread identifier. */
+    enum thread_status status; /* Thread state. */
+    char name[16];             /* Name (for debugging purposes). */
+    uint8_t *stack;            /* Saved stack pointer. */
+    int priority;              /* Priority. */
+    struct list_elem allelem;  /* List element for all threads list. */
+                               // int waitedon -> useful for just storing a lot of infomation, anything that needs to add status. including file description
+                               // make a hunch 28 file... something
     /* Shared between thread.c and synch.c. */
     struct list_elem elem; /* List element. */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir; /* Page directory. */
+    /*
+
+        1.need two semaphores (one for waiting on the child and the one to read the exit status)
+        2.file descriptor table
+        3.current running thread? maybe
+        4.has been waited on flag
+
+    */
+
 #endif
 
     /* Owned by thread.c. */
@@ -111,7 +122,7 @@ void thread_start(void);
 void thread_tick(void);
 void thread_print_stats(void);
 
-typedef void thread_func (void *aux);
+typedef void thread_func(void *aux);
 tid_t thread_create(const char *name, int priority, thread_func *, void *);
 
 void thread_block(void);
@@ -123,7 +134,7 @@ void thread_exit(void) NO_RETURN;
 void thread_yield(void);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
-typedef void thread_action_func (struct thread *t, void *aux);
+typedef void thread_action_func(struct thread *t, void *aux);
 void thread_foreach(thread_action_func *, void *);
 
 int thread_get_priority(void);

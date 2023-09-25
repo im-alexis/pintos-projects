@@ -94,7 +94,7 @@ start_process(void *file_name_)
      * we just point the stack pointer (%esp) to our stack frame
      * and jump to it. */
 
-    hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp); // checking if the stack was set up correctly
+    // hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp); // checking if the stack was set up correctly
 
     asm volatile("movl %0, %%esp; jmp intr_exit" : : "g"(&if_) : "memory");
     NOT_REACHED();
@@ -111,6 +111,8 @@ start_process(void *file_name_)
  * does nothing. */
 int process_wait(tid_t child_tid UNUSED)
 {
+    while (1)
+        ;
     return -1;
     // 3. needs to properly wait
     // suma down suma up
@@ -248,7 +250,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     char args[24];
     int counter = 0;
     holder = file_name;
-    while (token = strtok_r(NULL, " ", &holder))
+    while (token = strtok_r(holder, " ", &holder))
     {
         args[counter] = token;
         counter++;
@@ -513,7 +515,9 @@ setup_stack(void **esp, int argc, char argv[])
                 /* Allocate enough space for the entire string (plus an extra byte for
                    '/0'). Copy the string to the stack, and add its reference to the array
                     of pointers. Keep track of how many bytes where needed for the arguments */
+
                 byte_count = byte_count + sizeof(char) * (strlen(argv[i]) + 1);
+
                 *esp = *esp - sizeof(char) * (strlen(argv[i]) + 1);
                 memcpy(*esp, argv[i], sizeof(char) * (strlen(argv[i]) + 1));
                 arg_val_ptr[i] = (uint32_t *)*esp;

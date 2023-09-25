@@ -4,6 +4,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/syscall.h"
+#include "userprog/process.h"
 
 static void syscall_handler(struct intr_frame *);
 
@@ -16,31 +17,73 @@ static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
     /* Remove these when implementing syscalls */
-    printf("system call!\n");
+    // printf("system call!\n");
     // 2. given an interupt frame, arguments go to stack. so grab it and the arg goes on 0
-    // do a giant switch case statement
+
+    // return values should be place on register eax
     uint32_t *esp = f->esp;
+    uint32_t syscall_num = *esp;
 
-    switch (*esp)
+    /*
+
+    NEED TO VALIDATE POINTERS
+
+    */
+
+    switch (syscall_num)
     {
-    case SYS_HALT:
 
+    /*
+    PROCESS RELATED SYSCALLS
+    */
+    case SYS_HALT:
+        f->eax = shutdown_power_off();
         break;
     case SYS_EXIT:
 
+        // Not really sure how to do this
+
+        int status = *(esp + 4);
+        // process_exit();
+        thread_exit();
         break;
     case SYS_EXEC:
+    {
+        char *file_name = esp + 4;
+        f->eax = process_execute(file_name);
 
         break;
+    }
+
     case SYS_WAIT:
+    {
+        /*
+            NEED WAIT RULES VALIDATION
+            ie.
+            1. only call wait once (could add a param (has_been_waited_on) in thread struct)
+            2. only wait on your own children (check if the struct has that list, if not add it)
 
+        */
+        tid_t tid = esp + 4;
+        f->eax = process_wait(tid);
         break;
+    }
+
+    /*
+    FILE RELATED SYSCALLS
+    LOOK AT /filesys/filesys.c for the calls
+
+    struct file
+
+    NEED TO CREATE A FILE DESCRIPTOR TABLE (possibly in the thread struct)
+    */
     case SYS_CREATE:
 
         break;
     case SYS_REMOVE:
 
         break;
+
     case SYS_OPEN:
 
         break;
@@ -81,5 +124,5 @@ syscall_handler(struct intr_frame *f UNUSED)
          */
     }
 
-    thread_exit();
+    // thread_exit();
 }
