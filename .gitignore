@@ -6,6 +6,7 @@
 .DS_Store
 .PINTOS_PATH
 .tags
+.vscode
 TAGS
 cscope.files
 cscope.out
