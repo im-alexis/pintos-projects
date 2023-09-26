@@ -75,23 +75,25 @@ bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call)
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
-    /* Remove these when implementing syscalls */
-    // printf("system call!\n");
-    // 2. given an interupt frame, arguments go to stack. so grab it and the arg goes on 0
 
     // return values should be place on register eax
     uint32_t *esp = f->esp;
     uint32_t syscall_num = *esp;
 
     /*
+    Don't know if they work - needs testing
+    */
+    uint32_t arg0 = esp + 4;
+    uint32_t arg1 = esp + 8;
+    uint32_t arg2 = esp + 12;
 
-    NEED TO VALIDATE POINTERS
+    /*
+
+    NEED TO TEST VALIDATE POINTERS
 
     */
     if (!valid_ptr(esp, -1, 1, 1))
-    {
         return;
-    }
 
     switch (syscall_num)
     {
@@ -107,10 +109,10 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_EXIT:
     {
-        struct thread *cur = thread_current();
-        cur->exit_code = *(esp + 4);
-        // process_exit();
-        thread_exit();
+        // struct thread *cur = thread_current();
+        // cur->exit_code = *(esp + 4);
+        //  process_exit();
+        // thread_exit();
         break;
     }
 

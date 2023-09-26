@@ -55,17 +55,18 @@ tid_t process_execute(const char *file_name)
 
     /*HOPEFULLY ADDS THE NEWLY CREATED THREAD TO THE PARENT*/
     struct thread *cur = thread_current();
-    struct thread *created_child_thread;
-    struct list_elem *child_in_list = list_begin(&cur->mis_ninos); // set the entry for the list
-    created_child_thread = list_entry(child_in_list, struct thread, chld_thrd_elm);
-    while (created_child_thread != NULL)
+    struct thread *thread;
+
+    struct list_elem *elm_in_list = list_begin(&cur->all_process_list); // set the entry for the list
+    thread = list_entry(elm_in_list, struct thread, allelem);
+    while (thread != NULL)
     {
-        created_child_thread = list_entry(child_in_list, struct thread, chld_thrd_elm); // calls the macro define in list
-        if (created_child_thread->tid == tid)
+        thread = list_entry(elm_in_list, struct thread, allelem); // calls the macro define in list
+        if (thread->tid == tid)
             break;
-        created_child_thread = list_next(&cur->chld_thrd_elm); // move to the next element
+        elm_in_list = list_next(&thread->allelem); // move to the next element
     }
-    list_push_back(&cur->mis_ninos, &created_child_thread->chld_thrd_elm);
+    list_push_back(&cur->mis_ninos, &thread->chld_thrd_elm);
 
     if (tid == TID_ERROR)
     {
@@ -136,7 +137,7 @@ struct thread *is_my_child(tid_t child_tid)
             found = true;
             break;
         }
-        child_in_list = list_next(&cur->chld_thrd_elm);
+        child_in_list = list_next(&child_thread->chld_thrd_elm);
     }
     if (found)
     {
@@ -169,9 +170,10 @@ int process_wait(tid_t child_tid UNUSED)
     {
         thread_waited_on->has_been_waited_on = true;
         sema_down(&thread_waited_on->exiting_thread); // wait for the child process to finish
-
+        int exit_code = thread_waited_on->exit_code;
         sema_up(&thread_waited_on->reading_exit_status);
-        return thread_waited_on->exit_code;
+
+        return exit_code;
     }
     return -1;
     // 3. needs to properly wait
@@ -187,7 +189,7 @@ void process_exit(void)
     /* Destroy the current process's page directory and switch back
      * to the kernel-only page directory. */
     pd = cur->pagedir;
-    sema_up(&cur->exiting_thread);
+
     if (pd != NULL)
     {
         /* Correct ordering here is crucial.  We must set
@@ -197,12 +199,16 @@ void process_exit(void)
          * directory before destroying the process's page
          * directory, or our active page directory will be one
          * that's been freed (and cleared). */
+
+        cur->exit_code = 0;
+        sema_up(&cur->exiting_thread);
         sema_down(&cur->reading_exit_status);
         cur->pagedir = NULL;
         pagedir_activate(NULL);
         pagedir_destroy(pd);
         return;
     }
+    sema_up(&cur->exiting_thread);
     sema_down(&cur->reading_exit_status);
 }
 

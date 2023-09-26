@@ -1,27 +1,29 @@
 NEED TO DOs:
+
+PRIORITY: WRITE SYSCALL, FIX EXIT SYSCALL
     In process.c
         1.process_wait()
-            a. find a wait to get the child threads to varify it is a child of the parent process
-            b. Maybe a list of all threads to find the tid_t passed into the function
-            c. validate that it is syncronized
+            a. validate that it is syncronized
 
     For syscalls (two types of syscalls file based and thread based)
         File Based:
             In threads/thread.c
                 1.init_thread()
-                    a. find a way to initialize a file descriptor table (ie how to get the struct file for STDOUT, STDIN, STDERR^) ^ not sure if we need STDERR
-                    b. find a way for a thread to keep track of child processes - IN PROGRESS (NEEDS TESTNG)
+                    a. find a way to initialize a file descriptor table (ie how to get the struct file for STDOUT, STDIN)
                     c. fuctions to update(add file descriptors, maybe remove)
             In userprog/syscall.c  
                 1.syscall_handler()
                     a. validate the that you can write/read said file (see commments on how to do it)
                     b. use the functions in filesys/file.h to do file related stuff
-                     c. How to create file
+                    c. How to create file
+                    d. synchronize look into mutex
+                    e. ALL FILE BASED SYSCALLS
         Process Based:
             In userprog/syscall.c  
                 1.syscall_handler()
                     a. Fix case SYS_WAIT
-                    b. Figure out how to validate pointers
+                    b. Fix SYS_EXIT
+                    c. Figure out how to validate pointers
                    
 
 

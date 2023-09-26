@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "lib/stdio.h"
+
 #include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
@@ -482,8 +484,9 @@ init_thread(struct thread *t, const char *name, int priority)
     /* Don't know how to set up the descriptor table as of yet */
     t->file_descriptor_table[0]; // STDIN
     t->file_descriptor_table[1]; // STDOUT
-    t->file_descriptor_table[2]; // STDERR
-    t->fdt_index = 3;
+                                 // t->file_descriptor_table[2]; // STDERR
+    t->fdt_index = 2;
+    t->exit_code = -1;
 
     /*semephore initialiazation*/
     sema_init(&t->reading_exit_status, 0);
@@ -492,6 +495,10 @@ init_thread(struct thread *t, const char *name, int priority)
     /* Initialize the child thread list */
     list_init(&t->mis_ninos);
 
+    /*Initialize the list of all threads f*/
+    list_init(&t->all_process_list);
+    list_push_back(&t->all_process_list, &t->allelem);
+    // list_
     /* EXPERIMENTAL CODE */
 
     old_level = intr_disable();
