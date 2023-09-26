@@ -1,0 +1,53 @@
+NEED TO DOs:
+    In process.c
+        1.process_wait()
+            a. find a wait to get the child threads to varify it is a child of the parent process
+            b. Maybe a list of all threads to find the tid_t passed into the function
+            c. validate that it is syncronized
+
+    For syscalls (two types of syscalls file based and thread based)
+        File Based:
+            In threads/thread.c
+                1.init_thread()
+                    a. find a way to initialize a file descriptor table (ie how to get the struct file for STDOUT, STDIN, STDERR^) ^ not sure if we need STDERR
+                    b. find a way for a thread to keep track of child processes - IN PROGRESS (NEEDS TESTNG)
+                    c. fuctions to update(add file descriptors, maybe remove)
+            In userprog/syscall.c  
+                1.syscall_handler()
+                    a. validate the that you can write/read said file (see commments on how to do it)
+                    b. use the functions in filesys/file.h to do file related stuff
+                     c. How to create file
+        Process Based:
+            In userprog/syscall.c  
+                1.syscall_handler()
+                    a. Fix case SYS_WAIT
+                    b. Figure out how to validate pointers
+                   
+
+
+
+
+As of now the user stack seems to be working right,
+
+args-none is setup like:
+
+bfffffe0  00 00 00 00 01 00 00 00-ec ff ff bf f6 ff ff bf |................|
+bffffff0  00 00 00 00 00 00 61 72-67 73 2d 6e 6f 6e 65 00 |......args-none.| 
+c0000000  53 ff 00 f0 53 ff 00 f0-c3 e2 00 f0 53 ff 00 f0 |S...S.......S...|
+c0000010  53 ff 00 f0 54 ff 00 f0-53 ff 00 f0 53 ff 00 f0 |S...T...S...S...|
+c0000020  a5 fe 00 f0 87 e9 00 f0-42 d4 00 f0 42 d4 00 f0 |........B...B...|
+c0000030  42 d4 00 f0 42 d4 00 f0-57 ef 00 f0 42 d4 00 f0 |B...B...W...B...|
+c0000040  9f d2 00 f0 4d f8 00 f0-41 f8 00 f0 fe e3 00 f0 |....M...A.......|
+c0000050  39 e7 00 f0 59 f8 00 f0-2e e8 00 f0 d2 ef 00 f0 |9...Y...........|
+
+
+
+
+
+
+
+Some QUESTIONS:
+
+1. Say in the syscall_handler when calling thread_current, will that be the thread that
+made the system call.
+

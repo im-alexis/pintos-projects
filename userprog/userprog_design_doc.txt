@@ -8,8 +8,9 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@utexas.edu>
-FirstName LastName <email@utexas.edu>
+Alexis Torres alexistorres@utexas.edu
+Javier Padilla javierpadilla@utexas.edu
+Guadalupe Melendez <FILL IN>
 
 ---- PRELIMINARIES ----
 

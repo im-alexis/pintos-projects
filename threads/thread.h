@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "synch.h"
+#include "filesys/file.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -98,20 +99,24 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir; /* Page directory. */
+
     /*
-
-        1.need two semaphores (one for waiting on the child and the one to read the exit status)
-
-        2.file descriptor table and some to keep track
-        3.current running thread? maybe
-        4.has been waited on flag
-
+    Need to inititalize
+     1. file_descriptor_table -> make of size 20
+     2. fdt_index -> make default 3 (STDIN (0), STDOUT (1), STDERR (2) ....)
+     3. Semaphores?
+     4. has_been_waited_one
     */
-    struct semaphore exit;
-    struct semaphore reading_status;
+    struct semaphore exiting_thread;      /* For when the thread is exiting*/
+    struct semaphore reading_exit_status; /* To make sure the parent can read the exit status of the child*/
 
-    struct list_elem file_descriptor_table; // should put in files
-    int fdt_index;
+    int exit_code; /* Holds the exit status for the thread*/
+
+    struct file file_descriptor_table[20]; /* Holds File Descriptors per process*/
+    int fdt_index;                         /* Is the index to the next file descriptor */
+    struct list mis_ninos;
+    struct list_elem chld_thrd_elm;
+    bool has_been_waited_on; /* Simple flag to check if a child was waited on or not*/
 
 #endif
 

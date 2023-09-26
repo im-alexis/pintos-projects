@@ -476,6 +476,24 @@ init_thread(struct thread *t, const char *name, int priority)
     t->priority = priority;
     t->magic = THREAD_MAGIC;
 
+    /* EXPERIMENTAL CODE */
+
+    t->has_been_waited_on = false;
+    /* Don't know how to set up the descriptor table as of yet */
+    t->file_descriptor_table[0]; // STDIN
+    t->file_descriptor_table[1]; // STDOUT
+    t->file_descriptor_table[2]; // STDERR
+    t->fdt_index = 3;
+
+    /*semephore initialiazation*/
+    sema_init(&t->reading_exit_status, 0);
+    sema_init(&t->exiting_thread, 0);
+
+    /* Initialize the child thread list */
+    list_init(&t->mis_ninos);
+
+    /* EXPERIMENTAL CODE */
+
     old_level = intr_disable();
     list_push_back(&all_list, &t->allelem);
     intr_set_level(old_level);

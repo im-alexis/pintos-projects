@@ -18,7 +18,7 @@
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
 #include "userprog/tss.h"
-
+#include "lib/kernel/list.h"
 #define LOGGING_LEVEL 6
 
 #include <log.h>
@@ -53,6 +53,20 @@ tid_t process_execute(const char *file_name)
     /* Create a new thread to execute FILE_NAME. */
     tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
 
+    /*HOPEFULLY ADDS THE NEWLY CREATED THREAD TO THE PARENT*/
+    struct thread *cur = thread_current();
+    struct thread *created_child_thread;
+    struct list_elem *child_in_list = list_begin(&cur->mis_ninos); // set the entry for the list
+    created_child_thread = list_entry(child_in_list, struct thread, chld_thrd_elm);
+    while (created_child_thread != NULL)
+    {
+        created_child_thread = list_entry(child_in_list, struct thread, chld_thrd_elm); // calls the macro define in list
+        if (created_child_thread->tid == tid)
+            break;
+        created_child_thread = list_next(&cur->chld_thrd_elm); // move to the next element
+    }
+    list_push_back(&cur->mis_ninos, &created_child_thread->chld_thrd_elm);
+
     if (tid == TID_ERROR)
     {
         palloc_free_page(fn_copy);
@@ -85,7 +99,6 @@ start_process(void *file_name_)
     {
         thread_exit();
     }
-    // 1. set up stack here!!!
 
     /* Start the user process by simulating a return from an
      * interrupt, implemented by intr_exit (in
@@ -99,6 +112,41 @@ start_process(void *file_name_)
     asm volatile("movl %0, %%esp; jmp intr_exit" : : "g"(&if_) : "memory");
     NOT_REACHED();
 }
+/*
+This fumction is very experimental, not really sure how the list works
+
+*/
+struct thread *is_my_child(tid_t child_tid);
+struct thread *is_my_child(tid_t child_tid)
+{
+    struct thread *cur = thread_current();
+    struct thread *child_thread;
+    bool found = false;
+
+    /* Makes use of the list struct in kernel */
+    struct list_elem *child_in_list = list_begin(&cur->mis_ninos); // set the entry for the list
+    child_thread = list_entry(child_in_list, struct thread, chld_thrd_elm);
+
+    while (child_thread != NULL)
+    {
+        child_thread = list_entry(child_in_list, struct thread, chld_thrd_elm);
+
+        if (child_thread->tid == child_tid)
+        {
+            found = true;
+            break;
+        }
+        child_in_list = list_next(&cur->chld_thrd_elm);
+    }
+    if (found)
+    {
+        return child_thread;
+    }
+    else
+    {
+        return NULL;
+    }
+}
 
 /* Waits for thread TID to die and returns its exit status.  If
  * it was terminated by the kernel (i.e. killed due to an
@@ -111,13 +159,20 @@ start_process(void *file_name_)
  * does nothing. */
 int process_wait(tid_t child_tid UNUSED)
 {
-    struct thread *cur = thread_current();
+    struct thread *thread_waited_on = is_my_child(child_tid);
+    if (thread_waited_on == NULL)
+    {
+        return -1;
+    }
 
-    sema_down(&cur->exit);
-    sema_up(&cur->reading_status);
+    if (!(thread_waited_on->has_been_waited_on))
+    {
+        thread_waited_on->has_been_waited_on = true;
+        sema_down(&thread_waited_on->exiting_thread); // wait for the child process to finish
 
-    while (1)
-        ;
+        sema_up(&thread_waited_on->reading_exit_status);
+        return thread_waited_on->exit_code;
+    }
     return -1;
     // 3. needs to properly wait
     // suma down suma up
@@ -132,6 +187,7 @@ void process_exit(void)
     /* Destroy the current process's page directory and switch back
      * to the kernel-only page directory. */
     pd = cur->pagedir;
+    sema_up(&cur->exiting_thread);
     if (pd != NULL)
     {
         /* Correct ordering here is crucial.  We must set
@@ -141,10 +197,13 @@ void process_exit(void)
          * directory before destroying the process's page
          * directory, or our active page directory will be one
          * that's been freed (and cleared). */
+        sema_down(&cur->reading_exit_status);
         cur->pagedir = NULL;
         pagedir_activate(NULL);
         pagedir_destroy(pd);
+        return;
     }
+    sema_down(&cur->reading_exit_status);
 }
 
 /* Sets up the CPU for running user code in the current
@@ -225,7 +284,7 @@ struct Elf32_Phdr
 #define PF_W 2 /* Writable. */
 #define PF_R 4 /* Readable. */
 
-static bool setup_stack(void **esp, int argc, char argv[]);
+static bool setup_stack(void **esp, int argc, char *argv[]);
 
 static bool validate_segment(const struct Elf32_Phdr *, struct file *);
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, uint32_t zero_bytes, bool writable);
@@ -251,16 +310,16 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
         goto done;
     }
     process_activate();
-    char *holder, token;
-    char args[24];
-    int counter = 0;
-    holder = file_name;
 
-    token = strtok_r(holder, " ", &holder);
+    char *sav_ptr, *token;
+    char *args[24];
+    int counter = 0;
+    sav_ptr = file_name;
+    token = strtok_r(sav_ptr, " ", &sav_ptr);
     args[counter] = token;
     counter++;
 
-    while (token = strtok_r(NULL, " ", &holder))
+    while (token = strtok_r(NULL, " ", &sav_ptr))
     {
         args[counter] = token;
         counter++;
@@ -277,7 +336,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     /* Read and verify executable header. */
     if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
     {
-        printf("load: %s: error loading executable\n", file_name);
+        printf("load: %s: error loading executable\n", args[0]);
         goto done;
     }
 
@@ -495,7 +554,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
  * user virtual memory. */
 static bool
-setup_stack(void **esp, int argc, char argv[])
+setup_stack(void **esp, int argc, char *argv[])
 {
 
     uint8_t *kpage;
@@ -535,7 +594,11 @@ setup_stack(void **esp, int argc, char argv[])
 
             // This padding for 4 byte allingment
             uint32_t padding_need = byte_count % 4;
-            *esp = *esp - padding_need;
+            for (int i = 0; i < padding_need; i++)
+            {
+                *esp = *esp - sizeof(char);
+                (*(char *)(*esp)) = 0;
+            }
 
             // Allocate space for & add the null sentinel.
             *esp = *esp - 4;
