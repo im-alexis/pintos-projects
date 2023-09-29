@@ -6,6 +6,15 @@
 #include "userprog/syscall.h"
 #include "userprog/process.h"
 
+#include "filesys/filesys.h"
+
+struct spicy_file
+{
+    struct file *file;
+    char *name;
+    int fd;
+};
+
 static void syscall_handler(struct intr_frame *);
 
 void syscall_init(void)
@@ -75,17 +84,20 @@ bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call)
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
+    struct thread *cur = thread_current();
 
     // return values should be place on register eax
-    uint32_t *esp = f->esp;
+    uint32_t *esp = f->esp; //
     uint32_t syscall_num = *esp;
+    uint32_t *addy = f->esp;
 
+    // hex_dump(*(int *)esp, *esp, 128, true);
     /*
     Don't know if they work - needs testing
     */
-    uint32_t arg0 = esp + 4;
-    uint32_t arg1 = esp + 8;
-    uint32_t arg2 = esp + 12;
+    uint32_t arg0 = addy + 1;
+    uint32_t arg1 = addy + 2;
+    uint32_t arg2 = addy + 3;
 
     /*
 
@@ -109,10 +121,11 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_EXIT:
     {
-        // struct thread *cur = thread_current();
-        // cur->exit_code = *(esp + 4);
+
+        cur->exit_code = *((int *)(esp + 4));
         //  process_exit();
-        // thread_exit();
+
+        thread_exit();
         break;
     }
 
@@ -144,36 +157,73 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     struct file
 
-    NEED TO CREATE A FILE DESCRIPTOR TABLE (possibly in the thread struct)
+    NEED TO CREATE A FILE DESCRIPTOR TABLE (possibly in the removed_from_table struct)
     */
     case SYS_CREATE:
     {
+        char *file = ((const char *)arg0);
+        unsigned size = ((unsigned)arg1);
+        struct file *new_file = malloc(sizeof(struct file));
+        f->eax = filesys_create(file, size);
         break;
     }
 
     case SYS_REMOVE:
     {
+        // search for a file in descriptor table
+        char *file = ((const char *)arg0);
+
+        if (removed_from_table(file, cur))
+        {
+            filesys_remove(file);
+            return true;
+        }
+        return false;
         break;
     }
+        // idk what we are doing, we are drunk, sober alexis, look here plz
+        // javier approved of this one,,
 
     case SYS_OPEN: // call file_open()
     {
+        // add file descriptor
+        char *file = ((const char *)arg0);
+        struct file *found = filesys_open(file);
+        if (file != NULL)
+        {
+            int fd = add_to_table(cur, found);
+            return fd;
+        }
+        // create a file struct
+        // if null return -1
+        // else return the file descriptor
+        return -1;
         break;
     }
 
     case SYS_FILESIZE: // file_length();
     {
+
         break;
     }
 
     case SYS_READ: // validate with write check index [0] and [size-1] -> put_user()
 
     {
+
         break;
     }
 
     case SYS_WRITE: // validate with read check index [0] and [size-1] -> get_user()
     {
+        // do some verification
+        int fd = (int)arg0;
+        char *buffer = *((char *)arg1);
+        uint32_t size = (uint32_t)arg2;
+
+        struct file *targeta = &cur->file_descriptor_table[fd];
+
+        file_write(targeta, buffer, size);
         break;
     }
     case SYS_SEEK: // file_seek()

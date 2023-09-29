@@ -24,7 +24,7 @@ filesys_init(bool format)
     }
 
     inode_init();
-    free_map_init();
+    free_mafilesys_removep_init();
 
     if (format) {
         do_format();

@@ -486,6 +486,7 @@ init_thread(struct thread *t, const char *name, int priority)
     t->file_descriptor_table[1]; // STDOUT
                                  // t->file_descriptor_table[2]; // STDERR
     t->fdt_index = 2;
+    t->how_many_fd = 2;
     t->exit_code = -1;
 
     /*semephore initialiazation*/
@@ -624,3 +625,34 @@ allocate_tid(void)
 /* Offset of `stack' member within `struct thread'.
  * Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof(struct thread, stack);
+
+int add_to_table(struct thread *cur, struct file *new_file)
+{
+    // add like a loop around
+    if (new_file != NULL && (cur->how_many_fd < 20))
+    {
+        int val = cur->fdt_index;
+        cur->file_descriptor_table[val] = new_file;
+        cur->fdt_index++;
+        cur->how_many_fd++;
+        return val;
+    }
+    return 1;
+}
+bool removed_from_table(struct file *file, struct thread *cur)
+{
+
+    for (int i = 0; i < cur->how_many_fd; i++)
+    {
+        struct file *looped_file = cur->file_descriptor_table[i];
+        if (looped_file == file)
+        {
+            free(cur->file_descriptor_table[i]);
+            cur->file_descriptor_table[i] = NULL;
+            cur->how_many_fd--;
+            return true;
+        }
+    }
+
+    return false;
+}

@@ -53,7 +53,12 @@ tid_t process_execute(const char *file_name)
     /* Create a new thread to execute FILE_NAME. */
     tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
 
-    /*HOPEFULLY ADDS THE NEWLY CREATED THREAD TO THE PARENT*/
+    /*
+    ADDS THE NEWLY CREATED THREAD TO THE PARENT mis_ninos list
+    Notes: could be faster by just getting the last element in the list, but not sure if other threads can be created in the mean time.
+    ie. t1 is created, t1 initialized, and in between t1 being initialized t2 could be created, messing the whole thing up
+    */
+
     struct thread *cur = thread_current();
     struct thread *thread;
 
@@ -200,7 +205,7 @@ void process_exit(void)
          * directory, or our active page directory will be one
          * that's been freed (and cleared). */
 
-        cur->exit_code = 0;
+        // cur->exit_code = 0;
         sema_up(&cur->exiting_thread);
         sema_down(&cur->reading_exit_status);
         cur->pagedir = NULL;

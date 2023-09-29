@@ -112,8 +112,9 @@ struct thread
 
     int exit_code; /* Holds the exit status for the thread*/
 
-    struct file file_descriptor_table[20]; /* Holds File Descriptors per process*/
-    int fdt_index;                         /* Is the index to the next file descriptor */
+    struct file *file_descriptor_table[20]; /* Holds File Descriptors per process*/
+    int fdt_index;
+    int how_many_fd; /* Is the index to the next file descriptor */
     struct list mis_ninos;
     struct list_elem chld_thrd_elm;
     bool has_been_waited_on; /* Simple flag to check if a child was waited on or not*/
@@ -158,5 +159,7 @@ int thread_get_nice(void);
 void thread_set_nice(int);
 int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
+
+int add_to_table(struct thread *cur, struct file *new_file);
 
 #endif /* threads/thread.h */
