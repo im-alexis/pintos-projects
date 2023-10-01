@@ -1,19 +1,13 @@
-#include <stdio.h>
+// #include <stdio.h>
 #include <syscall-nr.h>
 
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/syscall.h"
 #include "userprog/process.h"
-
+#include "lib/stdio.h"
 #include "filesys/filesys.h"
-
-struct spicy_file
-{
-    struct file *file;
-    char *name;
-    int fd;
-};
+#include "threads/vaddr.h"
 
 static void syscall_handler(struct intr_frame *);
 
@@ -84,35 +78,43 @@ bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call)
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
+    static struct lock file_lock; // lock for synch when doing file related stuff
+    lock_init(&file_lock);
+
     struct thread *cur = thread_current();
 
     // return values should be place on register eax
     uint32_t *esp = f->esp; //
     uint32_t syscall_num = *esp;
-    uint32_t *addy = f->esp;
+    //  uint32_t *addy = f->esp;
 
-    // hex_dump(*(int *)esp, *esp, 128, true);
     /*
     Don't know if they work - needs testing
     */
-    uint32_t arg0 = addy + 1;
-    uint32_t arg1 = addy + 2;
-    uint32_t arg2 = addy + 3;
+    uint32_t *arg0 = esp + 1;
+    uint32_t *arg1 = esp + 2;
+    uint32_t *arg2 = esp + 3;
 
     /*
 
     NEED TO TEST VALIDATE POINTERS
+    Look thru
+    - is_user_vaddr()
+    - get_user()
+    - put_user()
 
     */
+
     if (!valid_ptr(esp, -1, 1, 1))
         return;
 
     switch (syscall_num)
     {
 
-    /*
-    PROCESS RELATED SYSCALLS
-    */
+        /*
+        PROCESS RELATED SYSCALLS
+        */
+
     case SYS_HALT:
     {
         f->eax = shutdown_power_off();
@@ -121,17 +123,15 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_EXIT:
     {
-
-        cur->exit_code = *((int *)(esp + 4));
-        //  process_exit();
-
+        int exit_code = ((int)*arg0);
+        cur->exit_code = ((int)*arg0);
         thread_exit();
         break;
     }
 
     case SYS_EXEC:
     {
-        char *file_name = esp + 4;
+        char *file_name = ((const char *)*arg0);
         f->eax = process_execute(file_name);
 
         break;
@@ -155,54 +155,62 @@ syscall_handler(struct intr_frame *f UNUSED)
     FILE RELATED SYSCALLS
     LOOK AT /filesys/filesys.c for the calls
 
-    struct file
+    Buzzwords : file_deny_write
+    might want to have a lock for when opening, writing etc.
 
-    NEED TO CREATE A FILE DESCRIPTOR TABLE (possibly in the removed_from_table struct)
     */
     case SYS_CREATE:
     {
-        char *file = ((const char *)arg0);
-        unsigned size = ((unsigned)arg1);
+        char *file = ((const char *)*arg0);
+        unsigned size = ((unsigned)*arg1);
         struct file *new_file = malloc(sizeof(struct file));
+        lock_acquire(&file_lock);
         f->eax = filesys_create(file, size);
+        lock_release(&file_lock);
         break;
     }
 
     case SYS_REMOVE:
     {
         // search for a file in descriptor table
-        char *file = ((const char *)arg0);
-
-        if (removed_from_table(file, cur))
+        char *file = ((const char *)*arg0);
+        lock_acquire(&file_lock);
+        bool ret = removed_from_table(file, cur);
+        lock_release(&file_lock);
+        if (ret)
         {
+            lock_acquire(&file_lock);
             filesys_remove(file);
-            return true;
+            lock_release(&file_lock);
+
+            f->eax = true;
         }
-        return false;
+        else
+        {
+            f->eax = false;
+        }
         break;
     }
         // idk what we are doing, we are drunk, sober alexis, look here plz
         // javier approved of this one,,
 
-    case SYS_OPEN: // call file_open()
-    {
-        // add file descriptor
-        char *file = ((const char *)arg0);
-        struct file *found = filesys_open(file);
-        if (file != NULL)
-        {
-            int fd = add_to_table(cur, found);
-            return fd;
-        }
-        // create a file struct
-        // if null return -1
-        // else return the file descriptor
-        return -1;
-        break;
-    }
-
     case SYS_FILESIZE: // file_length();
     {
+        int fd = ((int)*arg0);
+        if ((fd != STDIN_FILENO) && (fd != STDOUT_FILENO))
+        {
+            struct file *target = cur->file_descriptor_table[fd];
+            if (target != NULL)
+            {
+                lock_acquire(&file_lock);
+                f->eax = file_length(target);
+                lock_release(&file_lock);
+            }
+        }
+        else
+        {
+            f->eax = 0;
+        }
 
         break;
     }
@@ -210,34 +218,144 @@ syscall_handler(struct intr_frame *f UNUSED)
     case SYS_READ: // validate with write check index [0] and [size-1] -> put_user()
 
     {
+        int fd = ((int)*arg0);
+        char *buffer = ((char *)*arg1);
+        uint32_t size = (uint32_t)*arg2;
 
         break;
     }
 
     case SYS_WRITE: // validate with read check index [0] and [size-1] -> get_user()
     {
-        // do some verification
-        int fd = (int)arg0;
-        char *buffer = *((char *)arg1);
-        uint32_t size = (uint32_t)arg2;
+        /*
+        Need some validaiton -
 
-        struct file *targeta = &cur->file_descriptor_table[fd];
+       rough synch attempt
 
-        file_write(targeta, buffer, size);
+        */
+        int fd = ((int)*arg0);
+        char *buffer = ((char *)*arg1);
+        unsigned size = (unsigned)*arg2;
+        bool result = valid_ptr(&buffer, -1, (int)size, 0);
+        if (!result)
+        {
+            f->eax = 0;
+            return;
+        }
+
+        if (fd == STDIN_FILENO)
+        {
+            f->eax = 0;
+        }
+        else if (fd == STDOUT_FILENO)
+        {
+
+            lock_acquire(&file_lock);
+            putbuf(buffer, size); // writes to the console
+            lock_release(&file_lock);
+            f->eax = size;
+        }
+        else
+        {
+            struct file *targeta = cur->file_descriptor_table[fd];
+            lock_acquire(&file_lock);
+            file_write(targeta, buffer, size);
+            lock_release(&file_lock);
+            f->eax = size;
+        }
+
         break;
     }
     case SYS_SEEK: // file_seek()
     {
+        int fd = ((int)*arg0);
+        unsigned size = (unsigned)*arg1;
+        if (fd == STDIN_FILENO)
+        {
+            // need to get the file for stdin
+            lock_acquire(&file_lock);
+            // call file_seek()
+            lock_release(&file_lock);
+        }
+        else if (fd == STDOUT_FILENO)
+        {
+            // need to get the file for stdout
+            lock_acquire(&file_lock);
+            // call file_seek()
+            lock_release(&file_lock);
+        }
+        else
+        {
+            struct file *target = cur->file_descriptor_table[fd];
+            if (target != NULL)
+            {
+                lock_acquire(&file_lock);
+                file_seek(target, size);
+                lock_release(&file_lock);
+            }
+        }
+
         break;
     }
 
-    case SYS_TELL: // file_seek();
+    case SYS_TELL: // file_tell();
     {
+        int fd = ((int)*arg0);
+        if (fd == STDIN_FILENO)
+        {
+            // need to get the file for stdin
+            lock_acquire(&file_lock);
+            // call file_tell()
+            lock_release(&file_lock);
+        }
+        else if (fd == STDOUT_FILENO)
+        {
+            // need to get the file for stdout
+            lock_acquire(&file_lock);
+            // call file_tell()
+            lock_release(&file_lock);
+        }
+        else
+        {
+            struct file *target = cur->file_descriptor_table[fd];
+            if (target != NULL)
+            {
+                lock_acquire(&file_lock);
+                f->eax = file_tell(target);
+                lock_release(&file_lock);
+            }
+        }
         break;
     }
 
     case SYS_CLOSE: // file_close()
     {
+        int fd = ((int)*arg0);
+        if (fd == STDIN_FILENO)
+        {
+            // need to get the file for stdin
+            lock_acquire(&file_lock);
+            // call file_tell()
+            lock_release(&file_lock);
+        }
+        else if (fd == STDOUT_FILENO)
+        {
+            // need to get the file for stdout
+            lock_acquire(&file_lock);
+            // call close()
+            lock_release(&file_lock);
+        }
+        else
+        {
+            struct file *target = cur->file_descriptor_table[fd];
+            if (target != NULL)
+            {
+                lock_acquire(&file_lock);
+                file_close(target);
+                lock_release(&file_lock);
+            }
+        }
+
         break;
     }
 

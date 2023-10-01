@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "lib/stdio.h"
+#include "filesys/filesys.h"
 
 #include "threads/flags.h"
 #include "threads/interrupt.h"
@@ -302,6 +303,10 @@ void thread_exit(void)
     ASSERT(!intr_context());
 
 #ifdef USERPROG
+
+    /*
+    Might need to dealloacate some stuff
+    */
     process_exit();
 #endif
 
@@ -482,9 +487,11 @@ init_thread(struct thread *t, const char *name, int priority)
 
     t->has_been_waited_on = false;
     /* Don't know how to set up the descriptor table as of yet */
-    t->file_descriptor_table[0]; // STDIN
-    t->file_descriptor_table[1]; // STDOUT
-                                 // t->file_descriptor_table[2]; // STDERR
+    for (int i = 2; i < 20; i++)
+    {
+        t->file_descriptor_table[i] = NULL;
+    }
+
     t->fdt_index = 2;
     t->how_many_fd = 2;
     t->exit_code = -1;
@@ -625,19 +632,35 @@ allocate_tid(void)
 /* Offset of `stack' member within `struct thread'.
  * Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof(struct thread, stack);
+int find_next_table_pos(struct thread *cur);
+int find_next_table_pos(struct thread *cur)
+{
+    for (int i = 2; i < 20; i++)
+    {
+        if (cur->file_descriptor_table[i] == NULL)
+        {
+            cur->fdt_index = i;
+            return i;
+        }
+    }
+    return -1;
+}
 
 int add_to_table(struct thread *cur, struct file *new_file)
 {
     // add like a loop around
     if (new_file != NULL && (cur->how_many_fd < 20))
     {
-        int val = cur->fdt_index;
-        cur->file_descriptor_table[val] = new_file;
-        cur->fdt_index++;
-        cur->how_many_fd++;
-        return val;
+        if (find_next_table_pos(cur) != -1)
+        {
+            int val = cur->fdt_index;
+            cur->file_descriptor_table[val] = new_file;
+            cur->fdt_index++;
+            cur->how_many_fd++;
+            return val;
+        }
     }
-    return 1;
+    return -1;
 }
 bool removed_from_table(struct file *file, struct thread *cur)
 {
@@ -647,7 +670,10 @@ bool removed_from_table(struct file *file, struct thread *cur)
         struct file *looped_file = cur->file_descriptor_table[i];
         if (looped_file == file)
         {
-            free(cur->file_descriptor_table[i]);
+            /*
+            Properly rmeove from table
+            */
+            // free(cur->file_descriptor_table[i]);
             cur->file_descriptor_table[i] = NULL;
             cur->how_many_fd--;
             return true;

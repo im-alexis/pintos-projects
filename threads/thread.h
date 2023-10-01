@@ -161,5 +161,6 @@ int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
 
 int add_to_table(struct thread *cur, struct file *new_file);
+bool removed_from_table(struct file *file, struct thread *cur);
 
 #endif /* threads/thread.h */
