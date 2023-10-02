@@ -19,7 +19,7 @@ pass tests/userprog/halt
 pass tests/userprog/exit
 pass tests/userprog/create-normal
 pass tests/userprog/create-empty
-FAIL tests/userprog/create-null
+pass tests/userprog/create-null
 FAIL tests/userprog/create-bad-ptr
 pass tests/userprog/create-long
 pass tests/userprog/create-exists
@@ -30,7 +30,7 @@ pass tests/userprog/open-boundary
 FAIL tests/userprog/open-empty
 pass tests/userprog/open-null
 FAIL tests/userprog/open-bad-ptr
-FAIL tests/userprog/open-twice
+pass tests/userprog/open-twice
 FAIL tests/userprog/close-normal
 FAIL tests/userprog/close-twice
 pass tests/userprog/close-stdin
@@ -48,16 +48,16 @@ FAIL tests/userprog/write-boundary
 FAIL tests/userprog/write-zero
 pass tests/userprog/write-stdin
 FAIL tests/userprog/write-bad-fd
-FAIL tests/userprog/exec-once
+pass tests/userprog/exec-once
 FAIL tests/userprog/exec-arg
 FAIL tests/userprog/exec-multiple
 FAIL tests/userprog/exec-missing
 FAIL tests/userprog/exec-bad-ptr
-FAIL tests/userprog/wait-simple
-FAIL tests/userprog/wait-twice
+pass tests/userprog/wait-simple
+pass tests/userprog/wait-twice
 FAIL tests/userprog/wait-killed
 FAIL tests/userprog/wait-bad-pid
-FAIL tests/userprog/multi-recurse
+pass tests/userprog/multi-recurse
 FAIL tests/userprog/multi-child-fd
 FAIL tests/userprog/rox-simple
 FAIL tests/userprog/rox-child
@@ -81,7 +81,7 @@ FAIL tests/filesys/base/sm-seq-random
 FAIL tests/filesys/base/syn-read
 FAIL tests/filesys/base/syn-remove
 FAIL tests/filesys/base/syn-write
-46 of 75 tests failed.
+40 of 75 tests failed.
 
 
 

@@ -69,7 +69,7 @@ bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call)
     if (type_of_call == 1)
     {
         bool ret1 = put_user(addy, byte);
-        bool ret2 = put_user(addy, byte);
+        bool ret2 = put_user(addy + (size - 1), byte);
         return (ret1 && ret2);
     }
     else if (type_of_call == 0)
@@ -94,7 +94,13 @@ syscall_handler(struct intr_frame *f UNUSED)
     struct thread *cur = thread_current();
 
     // return values should be place on register eax
-    uint32_t *esp = f->esp; //
+    uint32_t *esp = f->esp;
+    // bool ret = is_user_vaddr(&esp);
+    if (!is_user_vaddr(esp))
+    {
+        matelo(cur);
+        return;
+    }
     uint32_t syscall_num = *esp;
     //  uint32_t *addy = f->esp;
 
@@ -119,17 +125,12 @@ syscall_handler(struct intr_frame *f UNUSED)
     this section is for some error handling
     if you encounter any error give it an auto boot (-1)
     */
-
     if (!is_user_vaddr(esp))
     {
         matelo(cur);
         return;
     }
-    if (!(is_user_vaddr(esp + 1) && is_user_vaddr(esp + 2) && is_user_vaddr(esp + 3)))
-    {
-        matelo(cur);
-        return;
-    }
+
     if (*esp < SYS_HALT || *esp > SYS_INUMBER)
     {
         matelo(cur);
@@ -151,6 +152,11 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_EXIT:
     {
+        if (!(is_user_vaddr(esp + 1)))
+        {
+            matelo(cur);
+            return;
+        }
         int exit_code = ((int)*arg0);
         cur->exit_code = ((int)*arg0);
         thread_exit();
@@ -159,6 +165,11 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_EXEC:
     {
+        if (!(is_user_vaddr(esp + 1)))
+        {
+            matelo(cur);
+            return;
+        }
         char *file_name = ((const char *)*arg0);
         f->eax = process_execute(file_name);
 
@@ -174,7 +185,12 @@ syscall_handler(struct intr_frame *f UNUSED)
             2. only wait on your own children (check if the struct has that list, if not add it)
 
         */
-        tid_t tid = esp + 4;
+        if (!(is_user_vaddr(esp + 1)))
+        {
+            matelo(cur);
+            return;
+        }
+        tid_t tid = ((tid_t)*arg0);
         f->eax = process_wait(tid);
         break;
     }
@@ -189,7 +205,19 @@ syscall_handler(struct intr_frame *f UNUSED)
     */
     case SYS_CREATE:
     {
+        // NEED TO VALIDATE POINTERS (bad pointers)
+        if (!(is_user_vaddr(esp + 1) && is_user_vaddr(esp + 2)))
+        {
+            matelo(cur);
+            return;
+        }
+
         char *file = ((const char *)*arg0);
+        if (file == NULL)
+        {
+            matelo(cur);
+            return;
+        }
         unsigned size = ((unsigned)*arg1);
         struct file *new_file = malloc(sizeof(struct file));
         lock_acquire(&file_lock);
@@ -197,10 +225,48 @@ syscall_handler(struct intr_frame *f UNUSED)
         lock_release(&file_lock);
         break;
     }
+    case SYS_OPEN:
+    {
+        // NEED TO VALIDATE POINTERS
+        if (!(is_user_vaddr(esp + 1) && is_user_vaddr(esp + 2)))
+        {
+            matelo(cur);
+            return;
+        }
+
+        char *file = ((const char *)*arg0);
+        if (file == NULL)
+        {
+            matelo(cur);
+            return;
+        }
+        lock_acquire(&file_lock);
+        struct file *opened_file = filesys_open(file);
+        lock_release(&file_lock);
+        int result = search_by_file(cur, opened_file);
+        if (result != -1)
+        {
+            lock_acquire(&file_lock);
+            file_close(file);
+            lock_release(&file_lock);
+            f->eax = -1;
+            return;
+        }
+        else
+        {
+            f->eax = add_to_table(cur, file);
+            break;
+        }
+    }
 
     case SYS_REMOVE:
     {
         // search for a file in descriptor table
+        if (!(is_user_vaddr(esp + 1)))
+        {
+            matelo(cur);
+            return;
+        }
         char *file = ((const char *)*arg0);
         lock_acquire(&file_lock);
         bool ret = removed_from_table(file, cur);
@@ -224,6 +290,11 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_FILESIZE: // file_length();
     {
+        if (!(is_user_vaddr(esp + 1)))
+        {
+            matelo(cur);
+            return;
+        }
         int fd = ((int)*arg0);
         if ((fd != STDIN_FILENO) && (fd != STDOUT_FILENO))
         {
@@ -246,6 +317,11 @@ syscall_handler(struct intr_frame *f UNUSED)
     case SYS_READ: // validate with write check index [0] and [size-1] -> put_user()
 
     {
+        if (!(is_user_vaddr(esp + 1) && is_user_vaddr(esp + 2) && is_user_vaddr(esp + 3)))
+        {
+            matelo(cur);
+            return;
+        }
         int fd = ((int)*arg0);
         char *buffer = ((char *)*arg1);
         uint32_t size = (uint32_t)*arg2;
@@ -261,6 +337,11 @@ syscall_handler(struct intr_frame *f UNUSED)
        rough synch attempt
 
         */
+        if (!(is_user_vaddr(esp + 1) && is_user_vaddr(esp + 2) && is_user_vaddr(esp + 3)))
+        {
+            matelo(cur);
+            return;
+        }
         int fd = ((int)*arg0);
         char *buffer = ((char *)*arg1);
         unsigned size = (unsigned)*arg2;
@@ -337,6 +418,11 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_TELL: // file_tell();
     {
+        if (!(is_user_vaddr(esp + 1)))
+        {
+            matelo(cur);
+            return;
+        }
         int fd = ((int)*arg0);
         if (fd == STDIN_FILENO)
         {
@@ -372,6 +458,11 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_CLOSE: // file_close()
     {
+        if (!(is_user_vaddr(esp + 1)))
+        {
+            matelo(cur);
+            return;
+        }
         int fd = ((int)*arg0);
         if (fd == STDIN_FILENO)
         {
