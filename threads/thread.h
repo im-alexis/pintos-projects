@@ -162,5 +162,6 @@ int thread_get_load_avg(void);
 
 int add_to_table(struct thread *cur, struct file *new_file);
 bool removed_from_table(struct file *file, struct thread *cur);
+int search_by_file(struct thread *cur, struct file *target_file);
 
 #endif /* threads/thread.h */

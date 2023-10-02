@@ -655,7 +655,7 @@ int add_to_table(struct thread *cur, struct file *new_file)
         {
             int val = cur->fdt_index;
             cur->file_descriptor_table[val] = new_file;
-            cur->fdt_index++;
+            // cur->fdt_index++;
             cur->how_many_fd++;
             return val;
         }
@@ -681,4 +681,16 @@ bool removed_from_table(struct file *file, struct thread *cur)
     }
 
     return false;
+}
+int search_by_file(struct thread *cur, struct file *target_file)
+{
+    for (int i = 2; i < 20; i++)
+    {
+        if (cur->file_descriptor_table[i] == target_file)
+        {
+
+            return i;
+        }
+    }
+    return -1;
 }
