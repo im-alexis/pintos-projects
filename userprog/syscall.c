@@ -323,8 +323,41 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         }
         int fd = ((int)*arg0);
+
         char *buffer = ((char *)*arg1);
         uint32_t size = (uint32_t)*arg2;
+
+        // check fd table is valid, make sure buffer is a valid pointer, check the size is greater than 0
+
+        if (fd == 1 || fd > 19)
+        {
+            matelo(cur);
+            return;
+        }
+
+        struct file *fdt = cur->file_descriptor_table[fd];
+
+        if (fdt == NULL)
+        {
+            matelo(cur);
+            return;
+        }
+
+        if (size > 0)
+        {
+            if (valid_ptr(buffer, 0, (int)size, 1))
+            {
+                f->eax = file_read(fdt, *buffer, (int)size);
+            }
+            else
+            {
+                matelo(cur);
+            }
+        }
+        else
+        {
+            matelo(cur);
+        }
 
         break;
     }
