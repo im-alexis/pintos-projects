@@ -42,6 +42,16 @@ put_user(uint8_t *udst, uint8_t byte)
 }
 
 /*
+Terminates a thread with exit code -1
+*/
+void matelo();
+void matelo(struct thread *cur)
+{
+    cur->exit_code = -1;
+    thread_exit();
+}
+
+/*
 This function will be used to validate pointers using the get_user/put_user method
 
 args:
@@ -105,8 +115,26 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     */
 
-    if (!valid_ptr(esp, -1, 1, 1))
+    /*
+    this section is for some error handling
+    if you encounter any error give it an auto boot (-1)
+    */
+
+    if (!is_user_vaddr(esp))
+    {
+        matelo(cur);
         return;
+    }
+    if (!(is_user_vaddr(esp + 1) && is_user_vaddr(esp + 2) && is_user_vaddr(esp + 3)))
+    {
+        matelo(cur);
+        return;
+    }
+    if (*esp < SYS_HALT || *esp > SYS_INUMBER)
+    {
+        matelo(cur);
+        return;
+    }
 
     switch (syscall_num)
     {
@@ -240,12 +268,15 @@ syscall_handler(struct intr_frame *f UNUSED)
         if (!result)
         {
             f->eax = 0;
+            matelo(cur);
             return;
         }
 
         if (fd == STDIN_FILENO)
         {
             f->eax = 0;
+            matelo(cur);
+            return;
         }
         else if (fd == STDOUT_FILENO)
         {
@@ -258,6 +289,12 @@ syscall_handler(struct intr_frame *f UNUSED)
         else
         {
             struct file *targeta = cur->file_descriptor_table[fd];
+            if (targeta == NULL)
+            {
+
+                matelo(cur);
+                return;
+            }
             lock_acquire(&file_lock);
             file_write(targeta, buffer, size);
             lock_release(&file_lock);
@@ -324,6 +361,11 @@ syscall_handler(struct intr_frame *f UNUSED)
                 f->eax = file_tell(target);
                 lock_release(&file_lock);
             }
+            else
+            {
+                matelo(cur);
+                return;
+            }
         }
         break;
     }
@@ -333,17 +375,15 @@ syscall_handler(struct intr_frame *f UNUSED)
         int fd = ((int)*arg0);
         if (fd == STDIN_FILENO)
         {
-            // need to get the file for stdin
-            lock_acquire(&file_lock);
-            // call file_tell()
-            lock_release(&file_lock);
+
+            matelo(cur);
+            return;
         }
         else if (fd == STDOUT_FILENO)
         {
             // need to get the file for stdout
-            lock_acquire(&file_lock);
-            // call close()
-            lock_release(&file_lock);
+            matelo(cur);
+            return;
         }
         else
         {

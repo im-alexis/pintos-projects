@@ -49,9 +49,16 @@ tid_t process_execute(const char *file_name)
         return TID_ERROR;
     }
     strlcpy(fn_copy, file_name, PGSIZE);
+    /*
+    move parsing here?
+
+    */
+    char *sav_ptr, *token;
+    sav_ptr = file_name;
+    token = strtok_r(sav_ptr, " ", &sav_ptr);
 
     /* Create a new thread to execute FILE_NAME. */
-    tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
+    tid = thread_create(token, PRI_DEFAULT, start_process, fn_copy);
 
     /*
     ADDS THE NEWLY CREATED THREAD TO THE PARENT mis_ninos list
