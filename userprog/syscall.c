@@ -40,6 +40,24 @@ put_user(uint8_t *udst, uint8_t byte)
         : "=&a"(error_code), "=m"(*udst) : "q"(byte));
     return error_code != -1;
 }
+void close_thread_files();
+void close_thread_files()
+{
+    struct thread *cur = thread_current;
+    if (cur->how_many_fd == 2)
+    {
+        return;
+    }
+    for (int i = 2; i < MAX_FD; i++)
+    {
+        struct file *file = cur->file_descriptor_table[i];
+        if (file != NULL)
+        {
+            file_close(file);
+        }
+        cur->file_descriptor_table[i] = NULL;
+    }
+}
 
 /*
 Terminates a thread with exit code -1
@@ -47,6 +65,7 @@ Terminates a thread with exit code -1
 void matelo();
 void matelo(struct thread *cur)
 {
+    // close_thread_files();
     cur->exit_code = -1;
     thread_exit();
 }
@@ -159,6 +178,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         int exit_code = ((int)*arg0);
         cur->exit_code = ((int)*arg0);
+        // close_thread_files();
         thread_exit();
         break;
     }
@@ -172,10 +192,6 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         char *file_name = ((const char *)*arg0);
         lock_acquire(&file_lock);
-        // struct file *file = filesys_open(file_name);
-        // if(file != NULL){
-
-        // }
         int val = process_execute(file_name);
         lock_release(&file_lock);
         f->eax = val;
@@ -226,7 +242,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         }
         unsigned size = ((unsigned)*arg1);
-        struct file *new_file = malloc(sizeof(struct file));
+        // struct file *new_file = malloc(sizeof(struct file));
         lock_acquire(&file_lock);
         f->eax = filesys_create(file, size);
         lock_release(&file_lock);
@@ -266,7 +282,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            f->eax = add_to_table(cur, file);
+            f->eax = add_to_table(cur, opened_file);
             break;
         }
     }
@@ -398,7 +414,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         }
 
-        if (fd == STDIN_FILENO)
+        if (fd == STDIN_FILENO || fd >= MAX_FD)
         {
             f->eax = 0;
             matelo(cur);
@@ -417,12 +433,17 @@ syscall_handler(struct intr_frame *f UNUSED)
             struct file *targeta = cur->file_descriptor_table[fd];
             if (targeta == NULL)
             {
-
                 matelo(cur);
                 return;
             }
+
             lock_acquire(&file_lock);
-            f->eax = file_write(targeta, buffer, size);
+            file_allow_write(targeta);
+            if (!targeta->deny_write)
+            {
+                f->eax = file_write(targeta, buffer, size);
+            }
+            file_deny_write(targeta);
             lock_release(&file_lock);
         }
 
@@ -519,11 +540,10 @@ syscall_handler(struct intr_frame *f UNUSED)
             if (target != NULL)
             {
 
-                // removed_from_table(target, cur);
                 lock_acquire(&file_lock);
                 file_close(target);
-                // file_deny_write(target);
                 lock_release(&file_lock);
+                removed_from_table(fd, cur);
             }
         }
 

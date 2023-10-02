@@ -27,8 +27,8 @@ pass tests/userprog/open-empty
 pass tests/userprog/open-null
 FAIL tests/userprog/open-bad-ptr
 pass tests/userprog/open-twice
-FAIL tests/userprog/close-normal
-FAIL tests/userprog/close-twice
+pass tests/userprog/close-normal
+pass tests/userprog/close-twice
 pass tests/userprog/close-stdin
 pass tests/userprog/close-stdout
 pass tests/userprog/close-bad-fd
@@ -38,16 +38,16 @@ FAIL tests/userprog/read-boundary
 FAIL tests/userprog/read-zero
 pass tests/userprog/read-stdout
 pass tests/userprog/read-bad-fd
-FAIL tests/userprog/write-normal
+pass tests/userprog/write-normal
 FAIL tests/userprog/write-bad-ptr
-FAIL tests/userprog/write-boundary
-FAIL tests/userprog/write-zero
+pass tests/userprog/write-boundary
+pass tests/userprog/write-zero
 pass tests/userprog/write-stdin
-FAIL tests/userprog/write-bad-fd
+pass tests/userprog/write-bad-fd
 pass tests/userprog/exec-once
 pass tests/userprog/exec-arg
 FAIL tests/userprog/exec-multiple
-FAIL tests/userprog/exec-missing - NEED TO CHANGE TID TO -1 in the right place
+FAIL tests/userprog/exec-missing
 FAIL tests/userprog/exec-bad-ptr
 pass tests/userprog/wait-simple
 pass tests/userprog/wait-twice
@@ -77,7 +77,7 @@ FAIL tests/filesys/base/sm-seq-random
 FAIL tests/filesys/base/syn-read
 FAIL tests/filesys/base/syn-remove
 FAIL tests/filesys/base/syn-write
-35 of 75 tests failed.
+29 of 75 tests failed.
 
 
 

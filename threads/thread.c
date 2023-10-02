@@ -685,6 +685,7 @@ int add_to_table(struct thread *cur, struct file *new_file)
     else if (new_file != NULL && (cur->how_many_fd < MAX_FD))
     {
         int val = cur->fdt_index;
+
         cur->file_descriptor_table[val] = new_file;
         cur->fdt_index++;
         cur->how_many_fd++;
