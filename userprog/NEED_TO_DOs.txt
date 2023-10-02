@@ -1,8 +1,4 @@
 NEED TO DOs:
-Priority: FIND THE DAMN STDOUT and STDIN struct file
-    Figure out how to validate pointers
-    Write the Read syscall 
-    Validate that other syscalls are working correctly, look into file deny write
 
                    
 Test Cases Results:
@@ -35,7 +31,7 @@ FAIL tests/userprog/close-normal
 FAIL tests/userprog/close-twice
 pass tests/userprog/close-stdin
 pass tests/userprog/close-stdout
-FAIL tests/userprog/close-bad-fd
+pass tests/userprog/close-bad-fd
 FAIL tests/userprog/read-normal
 FAIL tests/userprog/read-bad-ptr
 FAIL tests/userprog/read-boundary
@@ -49,14 +45,14 @@ FAIL tests/userprog/write-zero
 pass tests/userprog/write-stdin
 FAIL tests/userprog/write-bad-fd
 pass tests/userprog/exec-once
-FAIL tests/userprog/exec-arg
+pass tests/userprog/exec-arg
 FAIL tests/userprog/exec-multiple
-FAIL tests/userprog/exec-missing
+FAIL tests/userprog/exec-missing - NEED TO CHANGE TID TO -1 in the right place
 FAIL tests/userprog/exec-bad-ptr
 pass tests/userprog/wait-simple
 pass tests/userprog/wait-twice
 FAIL tests/userprog/wait-killed
-FAIL tests/userprog/wait-bad-pid
+pass tests/userprog/wait-bad-pid
 pass tests/userprog/multi-recurse
 FAIL tests/userprog/multi-child-fd
 FAIL tests/userprog/rox-simple
@@ -81,129 +77,9 @@ FAIL tests/filesys/base/sm-seq-random
 FAIL tests/filesys/base/syn-read
 FAIL tests/filesys/base/syn-remove
 FAIL tests/filesys/base/syn-write
-38 of 75 tests failed.
+35 of 75 tests failed.
 
 
 
 
 
-pass tests/userprog/args-none
-pass tests/userprog/args-single
-pass tests/userprog/args-multiple
-pass tests/userprog/args-many
-pass tests/userprog/args-dbl-space
-FAIL tests/userprog/sc-bad-sp
-pass tests/userprog/sc-bad-arg
-pass tests/userprog/sc-boundary
-pass tests/userprog/sc-boundary-2
-pass tests/userprog/halt
-pass tests/userprog/exit
-pass tests/userprog/create-normal
-pass tests/userprog/create-empty
-pass tests/userprog/create-null
-FAIL tests/userprog/create-bad-ptr
-pass tests/userprog/create-long
-pass tests/userprog/create-exists
-pass tests/userprog/create-bound
-pass tests/userprog/open-normal
-FAIL tests/userprog/open-missing
-pass tests/userprog/open-boundary
-FAIL tests/userprog/open-empty
-pass tests/userprog/open-null
-FAIL tests/userprog/open-bad-ptr
-pass tests/userprog/open-twice
-FAIL tests/userprog/close-normal
-FAIL tests/userprog/close-twice
-pass tests/userprog/close-stdin
-pass tests/userprog/close-stdout
-FAIL tests/userprog/close-bad-fd
-FAIL tests/userprog/read-normal
-FAIL tests/userprog/read-bad-ptr
-FAIL tests/userprog/read-boundary
-FAIL tests/userprog/read-zero
-pass tests/userprog/read-stdout
-pass tests/userprog/read-bad-fd
-FAIL tests/userprog/write-normal
-FAIL tests/userprog/write-bad-ptr
-FAIL tests/userprog/write-boundary
-FAIL tests/userprog/write-zero
-pass tests/userprog/write-stdin
-FAIL tests/userprog/write-bad-fd
-pass tests/userprog/exec-once
-FAIL tests/userprog/exec-arg
-FAIL tests/userprog/exec-multiple
-FAIL tests/userprog/exec-missing
-FAIL tests/userprog/exec-bad-ptr
-pass tests/userprog/wait-simple
-pass tests/userprog/wait-twice
-FAIL tests/userprog/wait-killed
-FAIL tests/userprog/wait-bad-pid
-pass tests/userprog/multi-recurse
-FAIL tests/userprog/multi-child-fd
-FAIL tests/userprog/rox-simple
-FAIL tests/userprog/rox-child
-FAIL tests/userprog/rox-multichild
-pass tests/userprog/bad-read
-pass tests/userprog/bad-write
-pass tests/userprog/bad-read2
-pass tests/userprog/bad-write2
-pass tests/userprog/bad-jump
-pass tests/userprog/bad-jump2
-FAIL tests/filesys/base/lg-create
-FAIL tests/filesys/base/lg-full
-FAIL tests/filesys/base/lg-random
-FAIL tests/filesys/base/lg-seq-block
-FAIL tests/filesys/base/lg-seq-random
-FAIL tests/filesys/base/sm-create
-FAIL tests/filesys/base/sm-full
-FAIL tests/filesys/base/sm-random
-FAIL tests/filesys/base/sm-seq-block
-FAIL tests/filesys/base/sm-seq-random
-FAIL tests/filesys/base/syn-read
-FAIL tests/filesys/base/syn-remove
-FAIL tests/filesys/base/syn-write
-40 of 75 tests failed.
-
-
-
-
-
-OUTDATED:
-    10/1/2023 - 
-        PRIORITY: WRITE SYSCALL, FIX EXIT SYSCALL
-            In process.c
-                1.process_wait()
-                    a. validate that it is syncronized
-
-            For syscalls (two types of syscalls file based and thread based)
-                File Based:
-                    In threads/thread.c
-                        1.init_thread()
-                            a. find a way to initialize a file descriptor table (ie how to get the struct file for STDOUT, STDIN)
-                            c. fuctions to update(add file descriptors, maybe remove)
-                    In userprog/syscall.c  
-                        1.syscall_handler()
-                            a. validate the that you can write/read said file (see commments on how to do it)
-                            b. use the functions in filesys/file.h to do file related stuff
-                            c. How to create file
-                            d. synchronize look into mutex
-                            e. ALL FILE BASED SYSCALLS
-                Process Based:
-                    In userprog/syscall.c  
-                        1.syscall_handler()
-                            a. Fix case SYS_WAIT
-                            b. Fix SYS_EXIT
-                            c. Figure out how to validate pointers
-
-        As of now the user stack seems to be working right,
-
-        args-none is setup like:
-
-        bfffffe0  00 00 00 00 01 00 00 00-ec ff ff bf f6 ff ff bf |................|
-        bffffff0  00 00 00 00 00 00 61 72-67 73 2d 6e 6f 6e 65 00 |......args-none.| 
-        c0000000  53 ff 00 f0 53 ff 00 f0-c3 e2 00 f0 53 ff 00 f0 |S...S.......S...|
-        c0000010  53 ff 00 f0 54 ff 00 f0-53 ff 00 f0 53 ff 00 f0 |S...T...S...S...|
-        c0000020  a5 fe 00 f0 87 e9 00 f0-42 d4 00 f0 42 d4 00 f0 |........B...B...|
-        c0000030  42 d4 00 f0 42 d4 00 f0-57 ef 00 f0 42 d4 00 f0 |B...B...W...B...|
-        c0000040  9f d2 00 f0 4d f8 00 f0-41 f8 00 f0 fe e3 00 f0 |....M...A.......|
-        c0000050  39 e7 00 f0 59 f8 00 f0-2e e8 00 f0 d2 ef 00 f0 |9...Y...........|

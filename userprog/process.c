@@ -33,6 +33,7 @@ static bool load(const char *cmdline, void (**eip)(void), void **esp);
 tid_t process_execute(const char *file_name)
 {
     char *fn_copy;
+    char *file_name_cpy, *sav_ptr;
     tid_t tid;
 
     // NOTE:
@@ -49,16 +50,18 @@ tid_t process_execute(const char *file_name)
         return TID_ERROR;
     }
     strlcpy(fn_copy, file_name, PGSIZE);
-    /*
-    move parsing here?
 
-    */
-    char *sav_ptr, *token;
-    sav_ptr = file_name;
-    token = strtok_r(sav_ptr, " ", &sav_ptr);
+    file_name_cpy = malloc(strlen(file_name) + 1);
+    if (file_name_cpy == NULL)
+    {
+        palloc_free_page(fn_copy);
+        return TID_ERROR;
+    }
+    strlcpy(file_name_cpy, file_name, PGSIZE);
+    file_name = strtok_r(file_name_cpy, " ", &sav_ptr); // getting that first token for file name
 
     /* Create a new thread to execute FILE_NAME. */
-    tid = thread_create(token, PRI_DEFAULT, start_process, fn_copy);
+    tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
 
     /*
     ADDS THE NEWLY CREATED THREAD TO THE PARENT mis_ninos list
@@ -84,7 +87,7 @@ tid_t process_execute(const char *file_name)
     {
         palloc_free_page(fn_copy);
     }
-    return tid;
+    return thread->tid;
 }
 
 /* A thread function that loads a user process and starts it
@@ -129,8 +132,8 @@ start_process(void *file_name_)
 This fumction is very experimental, not really sure how the list works
 
 */
-struct thread *is_my_child(tid_t child_tid);
-struct thread *is_my_child(tid_t child_tid)
+bool is_my_child(tid_t child_tid);
+bool is_my_child(tid_t child_tid)
 {
     struct thread *cur = thread_current();
     struct thread *child_thread;
@@ -143,22 +146,18 @@ struct thread *is_my_child(tid_t child_tid)
     while (child_thread != NULL)
     {
         child_thread = list_entry(child_in_list, struct thread, chld_thrd_elm);
+        if (!is_thread(child_thread))
+        {
+            break;
+        }
 
         if (child_thread->tid == child_tid)
         {
-            found = true;
-            break;
+            return true;
         }
         child_in_list = list_next(&child_thread->chld_thrd_elm);
     }
-    if (found)
-    {
-        return child_thread;
-    }
-    else
-    {
-        return NULL;
-    }
+    return false;
 }
 
 /* Waits for thread TID to die and returns its exit status.  If
@@ -172,8 +171,10 @@ struct thread *is_my_child(tid_t child_tid)
  * does nothing. */
 int process_wait(tid_t child_tid UNUSED)
 {
-    struct thread *thread_waited_on = is_my_child(child_tid);
-    if (thread_waited_on == NULL)
+
+    struct thread *thread_waited_on = find_thread_by_tid(child_tid);
+
+    if (!is_my_child(child_tid) || thread_waited_on == NULL)
     {
         return -1;
     }
@@ -348,6 +349,8 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     file = filesys_open(args[0]);
     if (file == NULL)
     {
+        // t->exit_code = -1;
+        // t->tid = -1;
         printf("load: %s: open failed\n", args[0]);
         goto done;
     }
@@ -355,6 +358,8 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     /* Read and verify executable header. */
     if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
     {
+        // t->exit_code = -1;
+        // t->tid = -1;
         printf("load: %s: error loading executable\n", args[0]);
         goto done;
     }
