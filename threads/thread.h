@@ -26,6 +26,7 @@ typedef int tid_t;
 #define PRI_DEFAULT 31 /* Default priority. */
 #define PRI_MAX 63     /* Highest priority. */
 
+#define MAX_FD 128 /*Maximum number of file descriptors allowed per table*/
 /* A kernel thread or user process.
  *
  * Each thread structure is stored in its own 4 kB page.  The
@@ -112,7 +113,7 @@ struct thread
 
     int exit_code; /* Holds the exit status for the thread*/
 
-    struct file *file_descriptor_table[20]; /* Holds File Descriptors per process*/
+    struct file *file_descriptor_table[MAX_FD]; /* Holds File Descriptors per process*/
     int fdt_index;
     int how_many_fd; /* Is the index to the next file descriptor */
     struct list mis_ninos;
@@ -160,8 +161,12 @@ void thread_set_nice(int);
 int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
 
+bool is_thread(struct thread *t);
+struct thread *find_thread_by_tid(tid_t tid);
+
 int add_to_table(struct thread *cur, struct file *new_file);
-bool removed_from_table(struct file *file, struct thread *cur);
+void removed_from_table(int fd, struct thread *cur);
+bool removed_from_table_by_filename(struct thread *cur, struct file *file);
 int search_by_file(struct thread *cur, struct file *target_file);
 
 #endif /* threads/thread.h */

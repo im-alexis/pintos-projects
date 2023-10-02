@@ -75,7 +75,7 @@ static struct thread *next_thread_to_run(void);
 
 static void init_thread(struct thread *, const char *name, int priority);
 
-static bool is_thread(struct thread *) UNUSED;
+// static bool is_thread(struct thread *) UNUSED;
 
 static void *alloc_frame(struct thread *, size_t size);
 
@@ -459,8 +459,7 @@ running_thread(void)
 }
 
 /* Returns true if T appears to point to a valid thread. */
-static bool
-is_thread(struct thread *t)
+bool is_thread(struct thread *t)
 {
     return t != NULL && t->magic == THREAD_MAGIC;
 }
@@ -628,6 +627,36 @@ allocate_tid(void)
 
     return tid;
 }
+/*
+Search for a thread given a tid
+Returns a struct thread*
+*/
+struct thread *find_thread_by_tid(tid_t ftid)
+{
+    struct thread *cur = thread_current();
+    struct thread *thread;
+
+    /* Makes use of the list struct in kernel */
+    struct list_elem *thread_in_list = list_begin(&cur->all_process_list); // set the entry for the list
+    thread = list_entry(thread_in_list, struct thread, allelem);
+
+    while (thread != NULL)
+    {
+        thread = list_entry(thread_in_list, struct thread, allelem);
+        if (!is_thread(thread))
+        {
+            break;
+        }
+
+        if (thread->tid == ftid)
+        {
+            return thread;
+        }
+
+        thread_in_list = list_next(&thread->allelem);
+    }
+    return NULL;
+}
 
 /* Offset of `stack' member within `struct thread'.
  * Used by switch.S, which can't figure it out on its own. */
@@ -635,7 +664,7 @@ uint32_t thread_stack_ofs = offsetof(struct thread, stack);
 int find_next_table_pos(struct thread *cur);
 int find_next_table_pos(struct thread *cur)
 {
-    for (int i = 2; i < 20; i++)
+    for (int i = 2; i < MAX_FD; i++)
     {
         if (cur->file_descriptor_table[i] == NULL)
         {
@@ -649,23 +678,28 @@ int find_next_table_pos(struct thread *cur)
 int add_to_table(struct thread *cur, struct file *new_file)
 {
     // add like a loop around
-    if (new_file != NULL && (cur->how_many_fd < 20))
+    if ((cur->fdt_index == MAX_FD - 1) && (cur->how_many_fd != MAX_FD))
     {
-        if (find_next_table_pos(cur) != -1)
-        {
-            int val = cur->fdt_index;
-            cur->file_descriptor_table[val] = new_file;
-            // cur->fdt_index++;
-            cur->how_many_fd++;
-            return val;
-        }
+        find_next_table_pos(cur);
+    }
+    else if (new_file != NULL && (cur->how_many_fd < MAX_FD))
+    {
+        int val = cur->fdt_index;
+        cur->file_descriptor_table[val] = new_file;
+        cur->fdt_index++;
+        cur->how_many_fd++;
+        return val;
     }
     return -1;
 }
-bool removed_from_table(struct file *file, struct thread *cur)
+void removed_from_table(int fd, struct thread *cur)
 {
-
-    for (int i = 0; i < cur->how_many_fd; i++)
+    cur->file_descriptor_table[fd] = NULL;
+    cur->how_many_fd--;
+}
+bool removed_from_table_by_filename(struct thread *cur, struct file *file)
+{
+    for (int i = 2; i < MAX_FD; i++)
     {
         struct file *looped_file = cur->file_descriptor_table[i];
         if (looped_file == file)
@@ -684,11 +718,10 @@ bool removed_from_table(struct file *file, struct thread *cur)
 }
 int search_by_file(struct thread *cur, struct file *target_file)
 {
-    for (int i = 2; i < 20; i++)
+    for (int i = 2; i < MAX_FD; i++)
     {
         if (cur->file_descriptor_table[i] == target_file)
         {
-
             return i;
         }
     }
