@@ -27,8 +27,7 @@ static void page_fault(struct intr_frame *);
  *
  * Refer to [IA32-v3a] section 5.15 "Exception and Interrupt
  * Reference" for a description of each of these exceptions. */
-void
-exception_init(void)
+void exception_init(void)
 {
     /* These exceptions can be raised explicitly by a user program,
      * e.g. via the INT, INT3, INTO, and BOUND instructions.  Thus,
@@ -42,10 +41,10 @@ exception_init(void)
      * invoking them via the INT instruction.  They can still be
      * caused indirectly, e.g. #DE can be caused by dividing by
      * 0.  */
-    intr_register_int(0,  0, INTR_ON, kill, "#DE Divide Error");
-    intr_register_int(1,  0, INTR_ON, kill, "#DB Debug Exception");
-    intr_register_int(6,  0, INTR_ON, kill, "#UD Invalid Opcode Exception");
-    intr_register_int(7,  0, INTR_ON, kill, "#NM Device Not Available Exception");
+    intr_register_int(0, 0, INTR_ON, kill, "#DE Divide Error");
+    intr_register_int(1, 0, INTR_ON, kill, "#DB Debug Exception");
+    intr_register_int(6, 0, INTR_ON, kill, "#UD Invalid Opcode Exception");
+    intr_register_int(7, 0, INTR_ON, kill, "#NM Device Not Available Exception");
     intr_register_int(11, 0, INTR_ON, kill, "#NP Segment Not Present");
     intr_register_int(12, 0, INTR_ON, kill, "#SS Stack Fault Exception");
     intr_register_int(13, 0, INTR_ON, kill, "#GP General Protection Exception");
@@ -59,8 +58,7 @@ exception_init(void)
 }
 
 /* Prints exception statistics. */
-void
-exception_print_stats(void)
+void exception_print_stats(void)
 {
     printf("Exception: %lld page faults\n", page_fault_cnt);
 }
@@ -79,7 +77,8 @@ kill(struct intr_frame *f)
 
     /* The interrupt frame's code segment value tells us where the
      * exception originated. */
-    switch (f->cs) {
+    switch (f->cs)
+    {
     case SEL_UCSEG:
         /* User's code segment, so it's a user exception, as we
          * expected.  Kill the user process.  */
@@ -131,7 +130,7 @@ page_fault(struct intr_frame *f)
      * See [IA32-v2a] "MOV--Move to/from Control Registers" and
      * [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception
      * (#PF)". */
-    asm ("movl %%cr2, %0" : "=r" (fault_addr));
+    asm("movl %%cr2, %0" : "=r"(fault_addr));
 
     /* Turn interrupts back on (they were only off so that we could
      * be assured of reading CR2 before it changed). */

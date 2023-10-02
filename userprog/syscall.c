@@ -243,6 +243,12 @@ syscall_handler(struct intr_frame *f UNUSED)
         lock_acquire(&file_lock);
         struct file *opened_file = filesys_open(file);
         lock_release(&file_lock);
+        if (opened_file == NULL)
+        {
+            // matelo(cur);
+            f->eax = -1;
+            return;
+        }
         int result = search_by_file(cur, opened_file);
         if (result != -1)
         {
@@ -497,15 +503,8 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         }
         int fd = ((int)*arg0);
-        if (fd == STDIN_FILENO)
+        if (fd == NULL || fd == STDOUT_FILENO || fd == STDIN_FILENO)
         {
-
-            matelo(cur);
-            return;
-        }
-        else if (fd == STDOUT_FILENO)
-        {
-            // need to get the file for stdout
             matelo(cur);
             return;
         }
@@ -514,10 +513,11 @@ syscall_handler(struct intr_frame *f UNUSED)
             struct file *target = cur->file_descriptor_table[fd];
             if (target != NULL)
             {
+                removed_from_table(target, cur);
                 lock_acquire(&file_lock);
                 file_close(target);
                 lock_release(&file_lock);
-            }
+                        }
         }
 
         break;
