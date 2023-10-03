@@ -315,6 +315,8 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t 
  * Returns true if successful, false otherwise. */
 bool load(const char *file_name, void (**eip)(void), void **esp)
 {
+    struct lock *file_lock;
+    lock_init(&file_lock);
     log(L_TRACE, "load()");
     struct thread *t = thread_current();
     struct Elf32_Ehdr ehdr;
@@ -346,10 +348,17 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     }
 
     /* Open executable file. */
+    lock_acquire(&file_lock);
     file = filesys_open(args[0]);
+    if (file != NULL)
+    {
+        file_deny_write(file);
+    }
+    lock_release(&file_lock);
+
     if (file == NULL)
     {
-        // t->exit_code = -1;
+        t->exit_code = 0;
         // t->tid = -1;
         printf("load: %s: open failed\n", args[0]);
         goto done;
@@ -443,7 +452,9 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
 done:
     /* We arrive here whether the load is successful or not. */
+    // lock_acquire(&file_lock);
     file_close(file);
+    // lock_release(&file_lock);
     return success;
 }
 

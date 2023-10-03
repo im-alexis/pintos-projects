@@ -191,6 +191,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         }
         char *file_name = ((const char *)*arg0);
+
         lock_acquire(&file_lock);
         int val = process_execute(file_name);
         lock_release(&file_lock);
@@ -351,41 +352,53 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         }
         int fd = ((int)*arg0);
-
         char *buffer = ((char *)*arg1);
-        uint32_t size = (uint32_t)*arg2;
+        off_t size = (off_t)*arg2;
 
         // check fd table is valid, make sure buffer is a valid pointer, check the size is greater than 0
 
-        if (fd == 1 || fd >= MAX_FD)
+        if (fd == STDOUT_FILENO || fd >= MAX_FD)
         {
             matelo(cur);
             return;
         }
-
-        struct file *fdt = cur->file_descriptor_table[fd];
-
-        if (fdt == NULL)
+        else if (fd == STDIN_FILENO)
         {
-            matelo(cur);
-            return;
-        }
-        file_deny_write(fdt);
-        if (size > 0)
-        {
-            if (valid_ptr(buffer, 0, (int)size, 1))
-            {
-                f->eax = file_read(fdt, *buffer, (int)size);
-            }
-            else
-            {
-                matelo(cur);
-            }
+            // input_getc()
+            break;
         }
         else
         {
-            matelo(cur);
+            struct file *fdt = cur->file_descriptor_table[fd];
+
+            if (fdt == NULL)
+            {
+                matelo(cur);
+                return;
+            }
+            lock_acquire(&file_lock);
+            file_deny_write(fdt);
+            f->eax = file_read(fdt, buffer, size);
+            lock_release(&file_lock);
+            break;
         }
+
+        // file_deny_write(fdt);
+        // if (size > 0)
+        // {
+        //     if (valid_ptr(buffer, 0, (int)size, 1))
+        //     {
+        //         f->eax = file_read(fdt, *buffer, (int)size);
+        //     }
+        //     else
+        //     {
+        //         matelo(cur);
+        //     }
+        // }
+        // else
+        // {
+        //     matelo(cur);
+        // }
 
         break;
     }
@@ -434,6 +447,13 @@ syscall_handler(struct intr_frame *f UNUSED)
             if (targeta == NULL)
             {
                 matelo(cur);
+                return;
+            }
+            struct file *exec_file = filesys_open(cur->executing_file);
+            if (exec_file->inode == targeta->inode)
+            {
+                cur->exit_code;
+                f->eax = 0;
                 return;
             }
 
