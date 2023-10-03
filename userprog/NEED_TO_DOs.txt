@@ -1,13 +1,40 @@
 NEED TO DOs:
 
-                   
+FAILED TESTCASES:
+
+POINTER VALIDATION CASES
+FAIL tests/userprog/sc-bad-sp -> PASS
+FAIL tests/userprog/create-bad-ptr
+FAIL tests/userprog/open-bad-ptr
+FAIL tests/userprog/read-bad-ptr -> PASS
+FAIL tests/userprog/write-bad-ptr
+FAIL tests/userprog/exec-bad-ptr
+
+
+FAIL tests/userprog/exec-multiple
+
+COULD BE A EASIER FIX
+FAIL tests/userprog/exec-missing
+FAIL tests/userprog/wait-killed
+
+FAIL tests/userprog/rox-child
+FAIL tests/userprog/rox-multichild
+
+
+FAIL tests/filesys/base/syn-read
+FAIL tests/filesys/base/syn-remove
+FAIL tests/filesys/base/syn-write
+
+
+
+
 Test Cases Results:
 pass tests/userprog/args-none
 pass tests/userprog/args-single
 pass tests/userprog/args-multiple
 pass tests/userprog/args-many
 pass tests/userprog/args-dbl-space
-FAIL tests/userprog/sc-bad-sp
+pass tests/userprog/sc-bad-sp
 pass tests/userprog/sc-bad-arg
 pass tests/userprog/sc-boundary
 pass tests/userprog/sc-boundary-2
@@ -33,7 +60,7 @@ pass tests/userprog/close-stdin
 pass tests/userprog/close-stdout
 pass tests/userprog/close-bad-fd
 pass tests/userprog/read-normal
-FAIL tests/userprog/read-bad-ptr
+pass tests/userprog/read-bad-ptr
 pass tests/userprog/read-boundary
 pass tests/userprog/read-zero
 pass tests/userprog/read-stdout
@@ -77,7 +104,7 @@ pass tests/filesys/base/sm-seq-random
 FAIL tests/filesys/base/syn-read
 FAIL tests/filesys/base/syn-remove
 FAIL tests/filesys/base/syn-write
-14 of 75 tests failed.
+12 of 75 tests failed.
 
 
 

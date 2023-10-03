@@ -23,6 +23,7 @@
 
 #include <log.h>
 
+bool exec_file_open;
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
 
@@ -35,6 +36,7 @@ tid_t process_execute(const char *file_name)
     char *fn_copy;
     char *file_name_cpy, *sav_ptr;
     tid_t tid;
+    exec_file_open = false;
 
     // NOTE:
     // To see this print, make sure LOGGING_LEVEL in this file is <= L_TRACE (6)
@@ -87,6 +89,11 @@ tid_t process_execute(const char *file_name)
     {
         palloc_free_page(fn_copy);
     }
+    // if (exec_file_open)
+    // {
+    //     return thread->tid;
+    // }
+    // return -1;
     return thread->tid;
 }
 
@@ -359,10 +366,11 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     if (file == NULL)
     {
         t->exit_code = 0;
-        // t->tid = -1;
+        t->tid = -1;
         printf("load: %s: open failed\n", args[0]);
         goto done;
     }
+    exec_file_open = true;
 
     /* Read and verify executable header. */
     if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
