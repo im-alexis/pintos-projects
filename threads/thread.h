@@ -93,7 +93,7 @@ struct thread
     int priority;                 /* Priority. */
     struct list_elem allelem;     /* List element for all threads list. */
     struct list all_process_list; /* So that the thread can access all other threads*/
-
+    char *executing_file;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem; /* List element. */
 
