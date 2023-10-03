@@ -157,19 +157,17 @@ syscall_handler(struct intr_frame *f UNUSED)
     struct thread *cur = thread_current(); /*current thread calling a system call*/
     uint32_t *esp = f->esp;
 
-    if (!is_user_vaddr((const void *)esp)) /*Validates the Stack Pointer */
+    if (!valid_ptr_v2((const void *)esp)) /*Validates the Stack Pointer */
     {
-        matelo(cur);   
+        //matelo(cur);   
         return;
     }
-    else
-    {   
-        if(!(valid_ptr(esp, 0, 4, 0)))
-        {
-            matelo(cur);
-            return;
-        }
+    if(!(valid_ptr(esp, 0, 4, 0)))
+    {
+        matelo(cur);
+        return;
     }
+    
     uint32_t syscall_num = *esp;
     /*Getting the arguments from eso*/
     uint32_t *arg0 = esp + 1;
@@ -196,7 +194,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_EXIT:
     {
-        if (!is_user_vaddr((const void *)arg0))
+        if (!valid_ptr_v2((const void *)arg0))
             return;
         int exit_code = ((int)*arg0);
         cur->exit_code = ((int)*arg0);
@@ -207,7 +205,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_EXEC:
     {
-        if (!is_user_vaddr((const void *)arg0))
+        if (!valid_ptr_v2((const void *)arg0))
             return;
         char *file_name = ((const char *)*arg0);
         lock_acquire(&file_lock);
@@ -231,7 +229,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     */
     case SYS_CREATE:
     {
-        if (!is_user_vaddr((const void *)arg0) || !is_user_vaddr((const void *)arg1))
+        if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1))
             return;
 
         char *file = ((const char *)*arg0);
@@ -248,7 +246,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
     case SYS_OPEN:
     {
-        if (!is_user_vaddr((const void *)arg0) || !is_user_vaddr((const void *)arg1))
+        if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1))
             return;
 
         char *file = ((const char *)*arg0);
@@ -284,7 +282,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     case SYS_REMOVE:
     {
         // search for a file in descriptor table
-        if (!is_user_vaddr((const void *)arg0))
+        if (!valid_ptr_v2((const void *)arg0))
             return;
 
         char *file = ((const char *)*arg0);
@@ -310,7 +308,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_FILESIZE: // file_length();
     {
-        if (!is_user_vaddr((const void *)arg0))
+        if (!valid_ptr_v2((const void *)arg0))
             return;
         int fd = ((int)*arg0);
         if ((fd != STDIN_FILENO) && (fd != STDOUT_FILENO))
@@ -334,7 +332,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     case SYS_READ: // validate with write check index [0] and [size-1] -> put_user()
 
     {
-        if (!is_user_vaddr((const void *)arg0) || !is_user_vaddr((const void *)arg1) || !is_user_vaddr((const void *)arg2))
+        if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1) || !valid_ptr_v2((const void *)arg2))
             return;
 
         int fd = ((int)*arg0);
