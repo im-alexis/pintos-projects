@@ -29,49 +29,94 @@ Guadalupe Melendez guadalupe.melendez@austin.utexas.edu
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-/* In thread.c */
-#define MAX_FD 128 /*Maximum number of file descriptors allowed per table*/
 
-struct thread
-{
-    /* Owned by thread.c. */
-    tid_t tid;                    /* Thread identifier. */
-    enum thread_status status;    /* Thread state. */
-    char name[16];                /* Name (for debugging purposes). */
-    uint8_t *stack;               /* Saved stack pointer. */
-    int priority;                 /* Priority. */
-    struct list_elem allelem;     /* List element for all threads list. */
-    struct list all_process_list; /* So that the thread can access all other threads*/
-    char *executing_file;
-    /* Shared between thread.c and synch.c. */
-    struct list_elem elem;        /* List element. */
+threads/thread.c
+[+] struct thread *find_thread_by_tid(tid_t ftid);
+- Searchs for a thread given a tid and will return a struct thread
+[+] struct kernel_thread_frame();
+- Stack frame for Kenerel_thread()
+[+] int find_next_table_pos(struct thread *cur);
+- Max of 128, so this will find the next avaiable position for *cur.
+[+] int add_to_table(struct thread *cur, struct file *new_file);
+- Will add whatever file onto the thread.
+[+] void removed_from_table(int fd, struct thread *cur);
+- from the file file descriptor table will insert a null in that position
+[+] bool removed_from_table_by_filename(struct thread *cur, struct file *file);
+- from the actual filename will insert a null in that position
+[+] int search_by_file(struct thread *cur, struct file *target_file);
+- returns either the actual location if file found and if not found then return -1;
+[+] void thread_schedule_tail(struct thread *prev)
+- After this funcrion and its caller returns then the thread will switch
 
-#ifdef USERPROG
-    /* Owned by userprog/process.c. */
-    uint32_t *pagedir; /* Page directory. */
+threads/thread.h
+[+] struct thread
+ struct list all_process_list;
+ char *executing_file;
+- 
 
-    struct semaphore exiting_thread;      /* For when the thread is exiting*/
-    struct semaphore reading_exit_status; /* To make sure the parent can read the exit status of the child*/
+[+] struct semaphore exiting_thread;
+-
+[+] struct semaphore reading_exit_status;
+[+] int exit_code;
+[+] struct file *file_descriptor_table[MAX_FD]; 
+[+] int fdt_index;
+[+] int how_many_fd;
+[+] struct list mis_ninos;
+[+] struct list_elem chld_thrd_elm;
+[+] bool has_been_waited_on;
+[+] bool is_thread(struct thread *t);
+[+] struct thread *find_thread_by_tid(tid_t tid);
+[+] int add_to_table(struct thread *cur, struct file *new_file);
+[+] void removed_from_table(int fd, struct thread *cur);
+[+] bool removed_from_table_by_filename(struct thread *cur, struct file *file);
+[+] int search_by_file(struct thread *cur, struct file *target_file);
 
-    int exit_code;                        /* Holds the exit status for the thread*/
+userprog/process.c
+[+] bool exec_file_open;
+[+] tid_t process_execute(const char *file_name)
+ char *file_name_cpy, *sav_ptr;
+ exec_file_open = false;
+[+] struct thread *cur = thread_current();
+[+] struct thread *thread;
+[+] struct list_elem *elm_in_list = list_begin(&cur->all_process_list);
+[+] bool is_my_child(tid_t child_tid);
+[+] struct thread *cur = thread_current();
+[+] struct thread *child_thread;
+[+] struct list_elem *child_in_list = list_begin(&cur->mis_ninos);
+[+] list_entry(child_in_list, struct thread, chld_thrd_elm);
+[+] int process_wait(tid_t child_tid UNUSED) 
+ struct thread *thread_waited_on = find_thread_by_tid(child_tid);
+[+] char *sav_ptr, *token;
+[+] char *args[24];
+[+] int counter = 0;
+[+] sav_ptr = file_name;
+[+] uint32_t *arg_val_ptr[argc];
+[+] uint32_t byte_count = 0;
+[+] byte_count = byte_count + sizeof(char) * (strlen(argv[i]) + 1);
 
-    struct file *file_descriptor_table[MAX_FD];     /* Holds File Descriptors per process*/
-    int fdt_index;                                  /* File descriptor table index */
-    int how_many_fd;                                /* Is the index to the next file descriptor */
-    struct list mis_ninos;                          /* List holds the threads children */
-    struct list_elem chld_thrd_elm;                 /* * Not sure.  */
-    bool has_been_waited_on;                        /* Simple flag to check if a child was waited on or not*/
+userprog/syscall.h
+[+] static int get_user(const uint8_t *uaddr);
+[+] static bool put_user(uint8_t *udst, uint8_t byte);
+[+] void close_thread_files();
+[+] void matelo();
+[+] bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call);
+[+] bool valid_ptr_v2(const void *addy);
+[+] bool check_buffer(void *buff_to_check, unsigned size);
+[+] static struct lock file_lock; 
+[+] static int get_user(const uint8_t *uaddr);
+[+] void matelo(struct thread *cur);
+[+] bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call);
+[+] bool valid_ptr_v2(const void *addy);
 
-#endif
-
-    /* Owned by thread.c. */
-    unsigned magic; /* Detects stack overflow. */
-};
 
 
 
-/* In process.c */
-bool exec_file_open;            /* Variable that holds if exec file is open. */
+
+ userprog/syscall.c
+[+] 
+[+] 
+[+] 
+    
 
 
 ---- ALGORITHMS ----
@@ -90,13 +135,16 @@ bool exec_file_open;            /* Variable that holds if exec file is open. */
 
 >> How do you avoid overflowing the stack page?
     We limit the arguments to those that will fit in a single page. 
+    We also malloc when neccessary and are planning on freeing any unused data, such as when a remove is being called
 
 
 
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
-    strtok_r() is thread safe while strtok is not(). 
+    strtok_r() is thread safe while strtok is not(). (its a dafety precaution we take)
+
+
 
                              SYSTEM CALLS
                              ============
@@ -179,8 +227,28 @@ We then disable file_write to targeta, and release the lock.
 >> B9: Why did you choose to implement access to user memory from the
 >> kernel in the way that you did?
 
+Because the standford doc/ reciatation said it was easier of the two operations.
+It is more straightforward logically to get the test out of the way to begin with.
+
+
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
+Disadvantages:
+
+There exist many duplicate file descriptor structs, for stdin and stdout - 
+each thread contains structs for these fds. Worst case: acessing a file descriptor 
+is O(n), where n is the number of file descriptors for the current thread and we 
+obviously would need to run through the entire fd list. Best case it could be 
+O(1) if they were stored in an array.
+
+Advantages: 
+Because each thread has a list of its file descriptors, there is no limit on 
+the number of open file descriptors (until we run out of memory). Whether we use 
+pipe or open our file descriptors are created, the same structure can store the 
+necessary information, and be used in essentially the same way.
+
+
+
 
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
