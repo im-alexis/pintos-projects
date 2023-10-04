@@ -65,7 +65,9 @@ threads/thread.h
  struct list all_process_list;
  char *executing_file;
 - 
+
 [+] struct semaphore exiting_thread;
+-
 [+] struct semaphore reading_exit_status;
 [+] int exit_code;
 [+] struct file *file_descriptor_table[MAX_FD]; 
