@@ -253,7 +253,7 @@ necessary information, and be used in essentially the same way.
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
 
-Did we change these???
+Did we change these??? Weset things as the default.
 
                            SURVEY QUESTIONS
                            ================
