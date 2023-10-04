@@ -346,6 +346,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             matelo(cur);
             return;
         }
+        /* Confused here. */
         else if (fd == STDIN_FILENO)
         {
             f->eax = input_getc(); // -> getis keyboard input ??
@@ -407,8 +408,10 @@ syscall_handler(struct intr_frame *f UNUSED)
             lock_acquire(&file_lock);
             struct file *exec_file = filesys_open(cur->executing_file);
             lock_release(&file_lock);
+            //if()
             if (exec_file->inode == targeta->inode)
             {
+                /* Why don't you also close targeta? */
                 file_close(exec_file);
                 cur->exit_code;
                 f->eax = 0;

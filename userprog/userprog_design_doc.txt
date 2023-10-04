@@ -10,7 +10,7 @@
 
 Alexis Torres alexistorres@utexas.edu
 Javier Padilla javierpadilla@utexas.edu
-Guadalupe Melendez <FILL IN>
+Guadalupe Melendez guadalupe.melendez@austin.utexas.edu
 
 ---- PRELIMINARIES ----
 
@@ -29,15 +29,74 @@ Guadalupe Melendez <FILL IN>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+/* In thread.c */
+#define MAX_FD 128 /*Maximum number of file descriptors allowed per table*/
+
+struct thread
+{
+    /* Owned by thread.c. */
+    tid_t tid;                    /* Thread identifier. */
+    enum thread_status status;    /* Thread state. */
+    char name[16];                /* Name (for debugging purposes). */
+    uint8_t *stack;               /* Saved stack pointer. */
+    int priority;                 /* Priority. */
+    struct list_elem allelem;     /* List element for all threads list. */
+    struct list all_process_list; /* So that the thread can access all other threads*/
+    char *executing_file;
+    /* Shared between thread.c and synch.c. */
+    struct list_elem elem;        /* List element. */
+
+#ifdef USERPROG
+    /* Owned by userprog/process.c. */
+    uint32_t *pagedir; /* Page directory. */
+
+    struct semaphore exiting_thread;      /* For when the thread is exiting*/
+    struct semaphore reading_exit_status; /* To make sure the parent can read the exit status of the child*/
+
+    int exit_code;                        /* Holds the exit status for the thread*/
+
+    struct file *file_descriptor_table[MAX_FD];     /* Holds File Descriptors per process*/
+    int fdt_index;                                  /* File descriptor table index */
+    int how_many_fd;                                /* Is the index to the next file descriptor */
+    struct list mis_ninos;                          /* List holds the threads children */
+    struct list_elem chld_thrd_elm;                 /* * Not sure.  */
+    bool has_been_waited_on;                        /* Simple flag to check if a child was waited on or not*/
+
+#endif
+
+    /* Owned by thread.c. */
+    unsigned magic; /* Detects stack overflow. */
+};
+
+
+
+/* In process.c */
+bool exec_file_open;            /* Variable that holds if exec file is open. */
+
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
+
+    We allocate a new page, then copy file_name into the new page.
+    Next we create a hard copy of the file_name parameter into file_name_cpy
+    Then, we use strtok_r() to get the file name (which is the first element of the input param)
+    Next, we create a new thread to execute FILE_NAME, add it to the parent list (mis_ninos), and eventually start the process. 
+    In start_process, we call the load function which is where the rest of the argument parsing begins. 
+    In load we use strtok_r to save the first argument.
+    Then we go into a while loop in which the condition is such that if strtok_r() returns NULL, so that it can tokenize 
+    the rest of the input param and put them into our args array.
+
 >> How do you avoid overflowing the stack page?
+    We limit the arguments to those that will fit in a single page. 
+
+
 
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
+    strtok_r() is thread safe while strtok is not(). 
 
                              SYSTEM CALLS
                              ============
@@ -48,6 +107,8 @@ Guadalupe Melendez <FILL IN>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+static struct lock file_lock;   /* Lock for synchronization on file related operations */
+
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
@@ -56,6 +117,24 @@ Guadalupe Melendez <FILL IN>
 
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
+
+SYS_READ:
+We start by validating the argument pointers. If the pointers are not valid, the function returns. 
+Then, we set the fd to the first arg, *buffer to second arg, and the size to the third arg.
+Next we check that the buffer contains valid pointers to data for the indicated size (arg1).
+Then we check that fd table (ensures it is not reading from STDOUT and is less than the MAX_FD)
+Once we finish the validations, we set 'file' to the specified fd from from the current threads' file_descriptor_table
+If the file is NULL, we exit. If not, we acquire the file lock, set the file_write for the fdt to deny, run process_execute, the release the lock. We set the frames eax to the return value. 
+
+SYS_WRITE
+We validate the pointers and buffers and set the fd, *buffer, and size variables to args0, arg1, and arg2, respectively.
+Next we check that we are not reading from STDIN and the fd is less than MAX_FD - if they are, it exits the current thread and sets the return value to -1. 
+Then we check that if we are writing to the console (STDOUT). If we are, we use the file lock, run putbuf to write to the console, release the lock, then set the frames return value to size.
+Finally, in the case that it passes all validation and is not writing to the console, we set the 'targeta' file variable to the specified fd from the current thread's file_descriptor_table
+We then use this to verify that targeta is not equal to NULL, acquire the file_lock, open the current executing file and load it into the '*exec_file' file pointer, and release the file_lock
+Then we check if the file is trying to write to the executable file; if it is, we close the file and exit. 
+Otherwise, we acquire/release the lock while we close the exec_file. Then we acquire the file lock and re-enable targeta's write operation. If the targeta's deny_write is false, then we run file_write on targeta from 'buffer' of 'size'.
+We then disable file_write to targeta, and release the lock. 
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least
