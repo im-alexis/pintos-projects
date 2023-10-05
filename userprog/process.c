@@ -362,7 +362,6 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
         file_deny_write(file);
     }
     lock_release(&file_lock);
-
     if (file == NULL)
     {
         t->exit_code = 0;

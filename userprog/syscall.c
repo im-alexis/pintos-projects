@@ -274,6 +274,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
+            //file_allow_write(opened_file);
             f->eax = add_to_table(cur, opened_file);
             break;
         }
@@ -362,7 +363,7 @@ syscall_handler(struct intr_frame *f UNUSED)
                 return;
             }
             lock_acquire(&file_lock);
-            file_deny_write(fdt);
+            //file_allow_write(fdt);
             f->eax = file_read(fdt, buffer, size);
             lock_release(&file_lock);
             break;
@@ -411,8 +412,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             //if()
             if (exec_file->inode == targeta->inode)
             {
-                /* Why don't you also close targeta? */
-                file_close(exec_file);
+                //file_close(exec_file);
                 cur->exit_code;
                 f->eax = 0;
                 return;
@@ -422,11 +422,11 @@ syscall_handler(struct intr_frame *f UNUSED)
             lock_release(&file_lock);
 
             lock_acquire(&file_lock);
-            file_allow_write(targeta);
+            //file_allow_write(targeta);
             if (!targeta->deny_write)
                 f->eax = file_write(targeta, buffer, size);
 
-            file_deny_write(targeta);
+            //file_deny_write(targeta);
             lock_release(&file_lock);
         }
 
