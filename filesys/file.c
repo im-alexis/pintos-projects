@@ -37,7 +37,7 @@ void
 file_close(struct file *file)
 {
     if (file != NULL) {
-        // file_allow_write(file); // commented this out because TA told us to.
+        file_allow_write(file); // commented this out because TA told us to. WE WERE LIED TO :|
         inode_close(file->inode);
         free(file);
     }
