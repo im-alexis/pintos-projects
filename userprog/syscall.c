@@ -79,7 +79,7 @@ matelo (kill it)
 */
 void matelo(struct thread *cur)
 {
-    // close_thread_files();
+    close_thread_files();
     cur->exit_code = -1;
     thread_exit();
 }
@@ -198,7 +198,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         int exit_code = ((int)*arg0);
         cur->exit_code = ((int)*arg0);
-        // close_thread_files(); -> does not work, breaks everything
+        close_thread_files(); 
         thread_exit();
         break;
     }
@@ -347,7 +347,6 @@ syscall_handler(struct intr_frame *f UNUSED)
             matelo(cur);
             return;
         }
-        /* Confused here. */
         else if (fd == STDIN_FILENO)
         {
             f->eax = input_getc(); // -> getis keyboard input ??
