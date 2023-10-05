@@ -91,6 +91,7 @@ userprog/process.c
 [+] tid_t process_execute(const char *file_name)
  char *file_name_cpy, *sav_ptr;
  exec_file_open = false;
+ - 
 [+] struct thread *cur = thread_current();
 [+] struct thread *thread;
 [+] struct list_elem *elm_in_list = list_begin(&cur->all_process_list);
@@ -123,10 +124,16 @@ userprog/syscall.h
 
 
  userprog/syscall.c
-[+] 
-[+] 
-[+] 
-    
+[+] static int get_user(const uint8_t *uaddr);
+[+] static bool put_user(uint8_t *udst, uint8_t byte);
+[+] void close_thread_files();
+[+] void matelo();
+[+] bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call);
+[+] bool valid_ptr_v2(const void *addy);
+[+] bool check_buffer(void *buff_to_check, unsigned size);
+[+] static struct lock file_lock;
+
+
 
 
 ---- ALGORITHMS ----
