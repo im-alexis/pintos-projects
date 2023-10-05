@@ -188,7 +188,6 @@ bool is_my_child(tid_t child_tid)
  * does nothing. */
 int process_wait(tid_t child_tid UNUSED)
 {
-
     struct thread *thread_waited_on = find_thread_by_tid(child_tid);
 
     if (!is_my_child(child_tid) || thread_waited_on == NULL)

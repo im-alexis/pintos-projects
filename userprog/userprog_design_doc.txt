@@ -30,23 +30,106 @@ Guadalupe Melendez guadalupe.melendez@austin.utexas.edu
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
 
-threads/thread.c
-[+] struct thread *find_thread_by_tid(tid_t ftid);
-- Searchs for a thread given a tid and will return a struct thread
-[+] struct kernel_thread_frame();
-- Stack frame for Kenerel_thread()
-[+] int find_next_table_pos(struct thread *cur);
-- Max of 128, so this will find the next avaiable position for *cur.
-[+] int add_to_table(struct thread *cur, struct file *new_file);
-- Will add whatever file onto the thread.
-[+] void removed_from_table(int fd, struct thread *cur);
-- from the file file descriptor table will insert a null in that position
-[+] bool removed_from_table_by_filename(struct thread *cur, struct file *file);
-- from the actual filename will insert a null in that position
-[+] int search_by_file(struct thread *cur, struct file *target_file);
-- returns either the actual location if file found and if not found then return -1;
-[+] void thread_schedule_tail(struct thread *prev)
-- After this funcrion and its caller returns then the thread will switch
+
+userprog/process.c
+[+] static bool setup_stack(void **esp, int argc, char *argv[]);
+- Create a minimal stack by mapping a zeroed page at the top of 
+user virtual memory. Made sure its word aligned (padded).
+
+[+] tid_t process_execute(const char *file_name)
+ char *file_name_cpy, *sav_ptr;
+ - made a copy o the file name to look for the first argument
+ - stored where that ptr to that file name is for us to use later
+[+] struct thread *cur = thread_current();
+- gets the current running thread
+[+] struct thread *thread;
+- holds the newly created thread
+[+] struct list_elem *elm_in_list = list_begin(&cur->all_process_list);
+- to list all the elements and gets the head of the list
+[+] bool is_my_child(tid_t child_tid);
+- true or false is this my child from a speciific thread
+[+] struct thread *child_thread;
+- holds a child thread if found
+[+] struct list_elem *child_in_list = list_begin(&cur->mis_ninos);
+- a list of thread A's child threads and gets the head of the list
+[+] list_entry(child_in_list, struct thread, chld_thrd_elm);
+- this is to actually get it from a list element to an actual struct
+[+] int process_wait(tid_t child_tid UNUSED) 
+- just ensures the parent waits on the child process
+ struct thread *thread_waited_on = find_thread_by_tid(child_tid);
+ - returns the id into the struct thread if it finds a child id
+[+] char *args[24];
+- stores the filename areguments with a max of 24 arguments that we decided 
+that can be passed in
+[+] int counter = 0;
+- steping through the strok_r 
+[+] uint32_t *arg_val_ptr[argc];
+- A list of addresses to the values that are initially added to the stack.
+[+] uint32_t byte_count = 0;
+- counts how many bytes have been pushed onto the user stack
+
+userprog/syscall.h (and syscall.c)
+[+] static int get_user(const uint8_t *uaddr);
+- Returns the byte value if successful, -1 if a segfault occurred
+[+] static bool put_user(uint8_t *udst, uint8_t byte);
+- Puts the byte at udst if successful, otherwise returns FALSE
+[+] void close_thread_files();
+- closes all the files (except stdin and stdout) in the file descripter table 
+of a struct thread
+[+] bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call);
+- true or false if its a vaid pointer. middle man function between get_user and put_user
+and that checks  if its a valid pointer
+[+] bool valid_ptr_v2(const void *addy);
+- checks whether the addy points to something within our memory space
+[+] bool check_buffer(void *buff_to_check, unsigned size);
+- given a buffer it checks every element given a size
+[+] static struct lock file_lock; 
+- (milk in fridge rule) lock to make sure that we deal with some file operations all 
+the way through
+[+] void matelo(struct thread *cur);
+- this kills the process by setting the exit code to -1. will close all the files 
+
+
+
+
+
+
+---- ALGORITHMS ----
+
+>> A2: Briefly describe how you implemented argument parsing.  How do
+>> you arrange for the elements of argv[] to be in the right order?
+
+    We allocate a new page, then copy file_name into the new page.
+    Next we create a hard copy of the file_name parameter into file_name_cpy
+    Then, we use strtok_r() to get the file name (which is the first element of the input param)
+    Next, we create a new thread to execute FILE_NAME, add it to the parent list (mis_ninos), and eventually start the process. 
+    In start_process, we call the load function which is where the rest of the argument parsing begins. 
+    In load we use strtok_r to save the first argument.
+    Then we go into a while loop in which the condition is such that if strtok_r() returns NULL, so that it can tokenize 
+    the rest of the input param and put them into our args array.
+
+>> How do you avoid overflowing the stack page?
+    We limit the arguments to those that will fit in a single page. 
+    We also malloc when neccessary and are planning on freeing any unused data, such as when a remove is being called
+
+
+
+---- RATIONALE ----
+
+>> A3: Why does Pintos implement strtok_r() but not strtok()?
+    strtok_r() is thread safe while strtok is not(). (its a dafety precaution we take)
+
+
+
+                             SYSTEM CALLS
+                             ============
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
 
 threads/thread.h
 [+] struct thread
@@ -90,89 +173,35 @@ just go in and remove the file from existance
 userprog/process.c
 [+] tid_t process_execute(const char *file_name)
  char *file_name_cpy, *sav_ptr;
- exec_file_open = false;
- - 
+ - made a copy o the file name to look for the first argument
+ - stored where that ptr to that file name is for us to use later
 [+] struct thread *cur = thread_current();
+- gets the current running thread
 [+] struct thread *thread;
+- holds the newly created thread
 [+] struct list_elem *elm_in_list = list_begin(&cur->all_process_list);
+- to list all the elements and gets the head of the list
 [+] bool is_my_child(tid_t child_tid);
+- true or false is this my child from a speciific thread
 [+] struct thread *child_thread;
+- holds a child thread if found
 [+] struct list_elem *child_in_list = list_begin(&cur->mis_ninos);
+- a list of thread A's child threads and gets the head of the list
 [+] list_entry(child_in_list, struct thread, chld_thrd_elm);
+- this is to actually get it from a list element to an actual struct
 [+] int process_wait(tid_t child_tid UNUSED) 
+- just ensures the parent waits on the child process
  struct thread *thread_waited_on = find_thread_by_tid(child_tid);
-[+] char *sav_ptr, *token;
+ - returns the id into the struct thread if it finds a child id
 [+] char *args[24];
+- stores the filename areguments with a max of 24 arguments that we decided 
+that can be passed in
 [+] int counter = 0;
-[+] sav_ptr = file_name;
+- steping through the strok_r 
 [+] uint32_t *arg_val_ptr[argc];
+- A list of addresses to the values that are initially added to the stack.
 [+] uint32_t byte_count = 0;
-[+] byte_count = byte_count + sizeof(char) * (strlen(argv[i]) + 1);
-
-userprog/syscall.h
-[+] static int get_user(const uint8_t *uaddr);
-[+] static bool put_user(uint8_t *udst, uint8_t byte);
-[+] void close_thread_files();
-[+] bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call);
-[+] bool valid_ptr_v2(const void *addy);
-[+] bool check_buffer(void *buff_to_check, unsigned size);
-[+] static struct lock file_lock; 
-[+] void matelo(struct thread *cur);
-
-
-
-
-
- userprog/syscall.c
-[+] static int get_user(const uint8_t *uaddr);
-[+] static bool put_user(uint8_t *udst, uint8_t byte);
-[+] void close_thread_files();
-[+] void matelo();
-[+] bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call);
-[+] bool valid_ptr_v2(const void *addy);
-[+] bool check_buffer(void *buff_to_check, unsigned size);
-[+] static struct lock file_lock;
-
-
-
-
----- ALGORITHMS ----
-
->> A2: Briefly describe how you implemented argument parsing.  How do
->> you arrange for the elements of argv[] to be in the right order?
-
-    We allocate a new page, then copy file_name into the new page.
-    Next we create a hard copy of the file_name parameter into file_name_cpy
-    Then, we use strtok_r() to get the file name (which is the first element of the input param)
-    Next, we create a new thread to execute FILE_NAME, add it to the parent list (mis_ninos), and eventually start the process. 
-    In start_process, we call the load function which is where the rest of the argument parsing begins. 
-    In load we use strtok_r to save the first argument.
-    Then we go into a while loop in which the condition is such that if strtok_r() returns NULL, so that it can tokenize 
-    the rest of the input param and put them into our args array.
-
->> How do you avoid overflowing the stack page?
-    We limit the arguments to those that will fit in a single page. 
-    We also malloc when neccessary and are planning on freeing any unused data, such as when a remove is being called
-
-
-
----- RATIONALE ----
-
->> A3: Why does Pintos implement strtok_r() but not strtok()?
-    strtok_r() is thread safe while strtok is not(). (its a dafety precaution we take)
-
-
-
-                             SYSTEM CALLS
-                             ============
-
----- DATA STRUCTURES ----
-
->> B1: Copy here the declaration of each new or changed `struct' or
->> `struct' member, global or static variable, `typedef', or
->> enumeration.  Identify the purpose of each in 25 words or less.
-
-static struct lock file_lock;   /* Lock for synchronization on file related operations */
+- counts how many bytes have been pushed onto the user stack
 
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
