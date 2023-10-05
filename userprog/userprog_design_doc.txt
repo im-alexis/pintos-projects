@@ -52,27 +52,42 @@ threads/thread.h
 [+] struct thread
  struct list all_process_list;
  char *executing_file;
-- 
-
+- setting all the entries into a list and executing_file will point to the file 
+we are going to be steping into
 [+] struct semaphore exiting_thread;
--
+- neccessary for when the thread is exiting, we use semaphore to give enough 
+time inbetween 
 [+] struct semaphore reading_exit_status;
+-Giving time to the parent to read the child exit flag
 [+] int exit_code;
+- Needed to store exit status for when we wait on a thread
 [+] struct file *file_descriptor_table[MAX_FD]; 
+- This will hold the file descripter by each thread, depending which thread we are in
 [+] int fdt_index;
+- This is just helpig us keep track of where we are in the file descripter table
 [+] int how_many_fd;
+- counters needed to keep track of how many fd we are at
 [+] struct list mis_ninos;
+- so in english that means my children, so its my child thread
 [+] struct list_elem chld_thrd_elm;
+- needed to know what child thread element I am in
 [+] bool has_been_waited_on;
+- sends a true or false flag depending on if the child was waited on or not
 [+] bool is_thread(struct thread *t);
+- if t points at a valid thread will return a true
 [+] struct thread *find_thread_by_tid(tid_t tid);
+- Search for a thread given a tida and returns a struct thread
 [+] int add_to_table(struct thread *cur, struct file *new_file);
+- function will check and then return cur position, and if not will return -1
 [+] void removed_from_table(int fd, struct thread *cur);
+- has already been checked to confirm the file is there, so this function will
+just go in and remove the file from existance
 [+] bool removed_from_table_by_filename(struct thread *cur, struct file *file);
+- just looks through to remove firle but by file name sent
 [+] int search_by_file(struct thread *cur, struct file *target_file);
+- searches current threads file descriptors to see if target_file exists    
 
 userprog/process.c
-[+] bool exec_file_open;
 [+] tid_t process_execute(const char *file_name)
  char *file_name_cpy, *sav_ptr;
  exec_file_open = false;
@@ -276,7 +291,6 @@ It is more straightforward logically to get the test out of the way to begin wit
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
 Disadvantages:
-
 There exist many duplicate file descriptor structs, for stdin and stdout - 
 each thread contains structs for these fds. Worst case: acessing a file descriptor 
 is O(n), where n is the number of file descriptors for the current thread and we 
