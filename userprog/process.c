@@ -23,7 +23,6 @@
 
 #include <log.h>
 
-bool exec_file_open;
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
 
@@ -36,7 +35,6 @@ tid_t process_execute(const char *file_name)
     char *fn_copy;
     char *file_name_cpy, *sav_ptr;
     tid_t tid;
-    exec_file_open = false;
 
     // NOTE:
     // To see this print, make sure LOGGING_LEVEL in this file is <= L_TRACE (6)
@@ -89,11 +87,7 @@ tid_t process_execute(const char *file_name)
     {
         palloc_free_page(fn_copy);
     }
-    // if (exec_file_open)
-    // {
-    //     return thread->tid;
-    // }
-    // return -1;
+    // sema_down(&thread->exiting_thread);
     return thread->tid;
 }
 
@@ -115,13 +109,29 @@ start_process(void *file_name_)
     if_.eflags = FLAG_IF | FLAG_MBS;
 
     success = load(file_name, &if_.eip, &if_.esp); // load does a lot of stuff!
-
     /* If load failed, quit. */
     palloc_free_page(file_name);
     if (!success)
     {
+        struct thread *cur = thread_current();
+        cur->exit_code = -1;
         thread_exit();
     }
+    // if (success)
+    // {
+    //     palloc_free_page(file_name);
+    //     struct file *ex = filesys_open(cur->executing_file);
+    //     file_deny_write(ex);
+    //     sema_up(&cur->exiting_thread);
+    // }
+    // else
+    // {
+    //     palloc_free_page(file_name);
+    //     cur->exit_code = -1;
+    //     cur->tid = -1;
+    //     sema_up(&cur->exiting_thread);
+    //     thread_exit();
+    // }
 
     /* Start the user process by simulating a return from an
      * interrupt, implemented by intr_exit (in
@@ -369,13 +379,10 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
         printf("load: %s: open failed\n", args[0]);
         goto done;
     }
-    exec_file_open = true;
 
     /* Read and verify executable header. */
     if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
     {
-        // t->exit_code = -1;
-        // t->tid = -1;
         printf("load: %s: error loading executable\n", args[0]);
         goto done;
     }
@@ -459,9 +466,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
 done:
     /* We arrive here whether the load is successful or not. */
-    // lock_acquire(&file_lock);
     file_close(file);
-    // lock_release(&file_lock);
     return success;
 }
 

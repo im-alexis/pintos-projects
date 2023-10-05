@@ -260,7 +260,9 @@ but it doesn't work.
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
 
-There's one handshake from two semaphores. 
+Since wait() will also call process_wait, the funtctionality of a two way handshake still stands. The child process will release it's resources
+and wait for the parent process to read its code. Special cases would include, orphan process that never get their exit code. They will
+just be in limbo. 
 
 ---- RATIONALE ----
 

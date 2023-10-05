@@ -120,7 +120,7 @@ bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call)
         else
             return false;
     }
-    
+
     else
         return false;
 }
@@ -159,15 +159,14 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     if (!valid_ptr_v2((const void *)esp)) /*Validates the Stack Pointer */
     {
-        //matelo(cur);   
         return;
     }
-    if(!(valid_ptr(esp, 0, 4, 0)))
+    if (!(valid_ptr(esp, 0, 4, 0)))
     {
         matelo(cur);
         return;
     }
-    
+
     uint32_t syscall_num = *esp;
     /*Getting the arguments from eso*/
     uint32_t *arg0 = esp + 1;
@@ -198,7 +197,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         int exit_code = ((int)*arg0);
         cur->exit_code = ((int)*arg0);
-        close_thread_files(); 
+        close_thread_files();
         thread_exit();
         break;
     }
@@ -274,7 +273,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            //file_allow_write(opened_file);
+            // file_allow_write(opened_file);
             f->eax = add_to_table(cur, opened_file);
             break;
         }
@@ -293,10 +292,10 @@ syscall_handler(struct intr_frame *f UNUSED)
         if (ret)
         {
             lock_acquire(&file_lock);
-            filesys_remove(file);
+            f->eax = filesys_remove(file);
             lock_release(&file_lock);
 
-            f->eax = true;
+            // true;
         }
         else
         {
@@ -362,7 +361,7 @@ syscall_handler(struct intr_frame *f UNUSED)
                 return;
             }
             lock_acquire(&file_lock);
-            //file_allow_write(fdt);
+            // file_allow_write(fdt);
             f->eax = file_read(fdt, buffer, size);
             lock_release(&file_lock);
             break;
@@ -408,10 +407,9 @@ syscall_handler(struct intr_frame *f UNUSED)
             lock_acquire(&file_lock);
             struct file *exec_file = filesys_open(cur->executing_file);
             lock_release(&file_lock);
-            //if()
             if (exec_file->inode == targeta->inode)
             {
-                //file_close(exec_file);
+                file_close(exec_file);
                 cur->exit_code;
                 f->eax = 0;
                 return;
@@ -421,11 +419,11 @@ syscall_handler(struct intr_frame *f UNUSED)
             lock_release(&file_lock);
 
             lock_acquire(&file_lock);
-            //file_allow_write(targeta);
+            // file_allow_write(targeta);
             if (!targeta->deny_write)
                 f->eax = file_write(targeta, buffer, size);
 
-            //file_deny_write(targeta);
+            // file_deny_write(targeta);
             lock_release(&file_lock);
         }
 
