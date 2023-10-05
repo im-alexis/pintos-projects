@@ -155,6 +155,9 @@ static struct lock file_lock;   /* Lock for synchronization on file related oper
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
+If a file has been opened by a thread, then the file will be added to the thread's file descriptor table. 
+If an opened file gets removed, then the file will be removed from the file descriptor table and it's index will be set to null. 
+File descripters are unique just within a single process.
 
 ---- ALGORITHMS ----
 
@@ -162,22 +165,23 @@ static struct lock file_lock;   /* Lock for synchronization on file related oper
 >> kernel.
 
 SYS_READ:
-We start by validating the argument pointers. If the pointers are not valid, the function returns. 
+We start by validating the argument pointers. If the pointers are not valid, then it kills the process with exit code -1 by calling matalo(). 
 Then, we set the fd to the first arg, *buffer to second arg, and the size to the third arg.
-Next we check that the buffer contains valid pointers to data for the indicated size (arg1).
-Then we check that fd table (ensures it is not reading from STDOUT and is less than the MAX_FD)
-Once we finish the validations, we set 'file' to the specified fd from from the current threads' file_descriptor_table
-If the file is NULL, we exit. If not, we acquire the file lock, set the file_write for the fdt to deny, run process_execute, the release the lock. We set the frames eax to the return value. 
+Next we check that the buffer contains valid pointers to the data for the indicated size (arg1). If it does not, the function returns. 
+Then we check that fd table (ensures it is not reading from STDOUT and is less than the MAX_FD). If it is, then we kill the process with exit code -1 be calling matalo().
+If the fd is equal to STDIN, then it returns the input from the keyboard. 
+Once we finish the validations, we set 'file' to the specified fd from from the current threads' file_descriptor_table.
+If the file is NULL, we exit. If not, we acquire the file lock, run process_execute, then release the lock. We set the frames eax to the return value. 
 
 SYS_WRITE
-We validate the pointers and buffers and set the fd, *buffer, and size variables to args0, arg1, and arg2, respectively.
-Next we check that we are not reading from STDIN and the fd is less than MAX_FD - if they are, it exits the current thread and sets the return value to -1. 
-Then we check that if we are writing to the console (STDOUT). If we are, we use the file lock, run putbuf to write to the console, release the lock, then set the frames return value to size.
+We validate the pointers and buffers and set the fd, *buffer, and size variables to arg0, arg1, and arg2, respectively.
+Next we check that we are not reading from STDIN and the fd is less than MAX_FD - if they are, it exits the current thread and sets the return exit value to 0. 
+Then we check if we are writing to the console (STDOUT). If we are, we use the file lock, run putbuf to write to the console, release the lock, then set the frame's return value to size.
 Finally, in the case that it passes all validation and is not writing to the console, we set the 'targeta' file variable to the specified fd from the current thread's file_descriptor_table
-We then use this to verify that targeta is not equal to NULL, acquire the file_lock, open the current executing file and load it into the '*exec_file' file pointer, and release the file_lock
+We then use this to verify that targeta is not NULL, acquire the file_lock, open the current executing file and load it into the '*exec_file' file pointer, and release the file_lock
 Then we check if the file is trying to write to the executable file; if it is, we close the file and exit. 
-Otherwise, we acquire/release the lock while we close the exec_file. Then we acquire the file lock and re-enable targeta's write operation. If the targeta's deny_write is false, then we run file_write on targeta from 'buffer' of 'size'.
-We then disable file_write to targeta, and release the lock. 
+Otherwise, we acquire/release the lock while we close the exec_file. If the targeta's deny_write is false, then we run file_write on targeta from 'buffer' of 'size'.
+Once this finishes, we release the lock. 
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least
@@ -185,9 +189,21 @@ We then disable file_write to targeta, and release the lock.
 >> (e.g. calls to pagedir_get_page()) that might result?  What about
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
+Assuming that the data is all on the same page (contigious memory), there will only be one inspection of the page table that is 
+necessary (this would be the least amount). On the hand, if they are not in contigous memory, there can be up to 4096 inspections. 
+Similarly, if they a call is only copying 2 bytes of data, there could be one inspection if they are in contigious memory but possibly (and up to) two if they are not. 
+A way to improve these numbers is to cache recent translations to decrease the number of inspections. 
 
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
+We start by setting the *thread_waited_on pointer to the child thread that's being waited on. We find the child thread by calling the find_thread_by_tid and passing in the child's tid.
+Next, we verify thread_waited_on exists and is a child of the current thread (i.e., the thread calling wait). If it is not, return -1
+Next we verify that the thread_waited_on has not been waited on before.
+If it has not, we set the flag that it has now been waited on, and call sema_down on the exiting_thread semaphore. This is to wait on process_exit() of the thread_waited_on side.
+Next we obtain the exit_code of the thread_waited_on, and sema_up to notify that the thread has been read. 
+Then terminate and free resources, and return exit code. 
+Else, the function returns -1. 
+
 
 >> B6: Any access to user program memory at a user-specified address
 >> can fail due to a bad pointer value.  Such accesses must cause the
@@ -202,6 +218,30 @@ We then disable file_write to targeta, and release the lock.
 >> allocated resources (locks, buffers, etc.) are freed?  In a few
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
+Our best approach at avoiding obscurity of the primary function amid all the 
+error handling was to create an organized and systematic structure. We 
+did as much pointer validation as possible at the top of our syscall_handler function before 
+going into the separate switch cases. 
+
+Aditionally, we used a switch case because we felt it helped the code to be more organized 
+and highlighted what the primary function was. Within each of the switch cases, we did our 
+best to systematically verify our components so that there was a common theme amongst the 
+cases which made it easier to identify what code was there for error handling. 
+We also did all error handling at the top and tried to used our 'else' statement for the execution 
+of the primary function. 
+
+We also used functions to break out the verification process and make it less overwhelming within the 
+switch cases.  In the case that error was detected, we would call out matalo() (which means kill in spanish) function which would
+exit the thread with exit_code -1 and free the threads resources. 
+
+For example, in the case SYS_WRITE we start by calling our first pointer validtion function and our check buffer function.
+After this, we load the necessary arguments into our variables, and verify these variables in our second validtion function. 
+If there are any errors, we call the matalo() function (which exits the thread with -1 and frees the thread's resources).
+Next we check for any niche cases, in this case, if the file descriptor is STDOUT and execute the putbuf function to write to the console. 
+Finally, in our else bracket, we execute the general case (i.e., the primary function).
+Since this requires additional error handling, we handle those first. We check if the file returned by the specified fd in the file_descriptor table returns NULL. 
+if it does, it exits with matalo() and returns.
+If it does not, we load the exec_file then finish executing the rest of the primary function. 
 
 ---- SYNCHRONIZATION ----
 
@@ -210,12 +250,17 @@ We then disable file_write to targeta, and release the lock.
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
 
+It does not. We tried using a lock around the execution of the child to ensure that it would return, 
+but it doesn't work. 
+
 >> B8: Consider parent process P with child process C.  How do you
 >> ensure proper synchronization and avoid race conditions when P
 >> calls wait(C) before C exits?  After C exits?  How do you ensure
 >> that all resources are freed in each case?  How about when P
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
+
+There's one handshake from two semaphores. 
 
 ---- RATIONALE ----
 
