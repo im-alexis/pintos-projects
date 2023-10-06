@@ -499,6 +499,7 @@ init_thread(struct thread *t, const char *name, int priority)
     /*semephore initialiazation*/
     sema_init(&t->reading_exit_status, 0);
     sema_init(&t->exiting_thread, 0);
+    sema_init(&t->process_semma, 0);
 
     /* Initialize the child thread list */
     list_init(&t->mis_ninos);
