@@ -82,12 +82,13 @@ tid_t process_execute(const char *file_name)
         elm_in_list = list_next(&thread->allelem); // move to the next element
     }
     list_push_back(&cur->mis_ninos, &thread->chld_thrd_elm);
+    thread->parent = cur;
 
     if (tid == TID_ERROR)
     {
         palloc_free_page(fn_copy);
     }
-    // sema_down(&thread->exiting_thread);
+    sema_down(&cur->process_semma);
     return thread->tid;
 }
 
@@ -110,28 +111,33 @@ start_process(void *file_name_)
 
     success = load(file_name, &if_.eip, &if_.esp); // load does a lot of stuff!
     /* If load failed, quit. */
-    palloc_free_page(file_name);
-    if (!success)
-    {
-        struct thread *cur = thread_current();
-        cur->exit_code = -1;
-        thread_exit();
-    }
-    // if (success)
+
+    struct thread *cur = thread_current();
+    struct thread *cur_parent = cur->parent;
+
+    // palloc_free_page(file_name);
+    // if (!success)
     // {
-    //     palloc_free_page(file_name);
-    //     struct file *ex = filesys_open(cur->executing_file);
-    //     file_deny_write(ex);
-    //     sema_up(&cur->exiting_thread);
-    // }
-    // else
-    // {
-    //     palloc_free_page(file_name);
     //     cur->exit_code = -1;
     //     cur->tid = -1;
-    //     sema_up(&cur->exiting_thread);
     //     thread_exit();
     // }
+
+    if (success)
+    {
+        palloc_free_page(file_name);
+        // struct file *ex = filesys_open(cur->executing_file);
+        // file_deny_write(ex);
+        sema_up(&cur_parent->process_semma);
+    }
+    else
+    {
+        palloc_free_page(file_name);
+        // cur->exit_code = -1;
+        cur->tid = -1;
+        sema_up(&cur_parent->process_semma);
+        thread_exit();
+    }
 
     /* Start the user process by simulating a return from an
      * interrupt, implemented by intr_exit (in
@@ -373,8 +379,8 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     lock_release(&file_lock);
     if (file == NULL)
     {
-        t->exit_code = 0;
-        t->tid = -1;
+        // t->exit_code = 0;
+        // t->tid = -1;
         printf("load: %s: open failed\n", args[0]);
         goto done;
     }

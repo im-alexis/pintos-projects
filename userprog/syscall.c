@@ -207,9 +207,9 @@ syscall_handler(struct intr_frame *f UNUSED)
         if (!valid_ptr_v2((const void *)arg0))
             return;
         char *file_name = ((const char *)*arg0);
-        lock_acquire(&file_lock);
+        // lock_acquire(&file_lock);
         int val = process_execute(file_name);
-        lock_release(&file_lock);
+        // lock_release(&file_lock);
         f->eax = val;
         break;
     }
@@ -409,7 +409,9 @@ syscall_handler(struct intr_frame *f UNUSED)
             lock_release(&file_lock);
             if (exec_file->inode == targeta->inode)
             {
+                lock_acquire(&file_lock);
                 file_close(exec_file);
+                lock_release(&file_lock);
                 cur->exit_code;
                 f->eax = 0;
                 return;
