@@ -361,7 +361,7 @@ syscall_handler(struct intr_frame *f UNUSED)
                 return;
             }
             lock_acquire(&file_lock);
-            // file_allow_write(fdt);
+            //  file_allow_write(fdt);
             f->eax = file_read(fdt, buffer, size);
             lock_release(&file_lock);
             break;
