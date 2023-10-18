@@ -1,7 +1,19 @@
 #ifndef USERPROG_PROCESS_H
 #define USERPROG_PROCESS_H
 
-#include "threads/thread.h"
+#include <debug.h>
+#include <inttypes.h>
+#include <round.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+#include "vm/frame.h"
+#include "vm/page.h"
+
+#include "filesys/directory.h"
+#include "lib/kernel/hash.h"
 
 
 tid_t process_execute(const char *file_name);

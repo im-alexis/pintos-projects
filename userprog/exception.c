@@ -5,6 +5,7 @@
 #include "threads/thread.h"
 #include "userprog/exception.h"
 #include "userprog/gdt.h"
+#include "process.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;

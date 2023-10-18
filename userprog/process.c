@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "filesys/directory.h"
 #include "filesys/file.h"
@@ -16,7 +17,7 @@
 #include "threads/vaddr.h"
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
-#include "userprog/process.h"
+#include "process.h"
 #include "userprog/tss.h"
 #include "lib/kernel/list.h"
 #define LOGGING_LEVEL 6
@@ -100,10 +101,10 @@ static void
 start_process(void *file_name_)
 {
     /*
-    *
-    * Initialize the set of vm_entries (hash table)
-    * 
-    */
+     *
+     * Initialize the set of vm_entries (hash table)
+     *
+     */
     char *file_name = file_name_;
     struct intr_frame if_;
     bool success;
@@ -206,7 +207,7 @@ int process_wait(tid_t child_tid UNUSED)
 {
     struct thread *thread_waited_on = find_thread_by_tid(child_tid);
 
-    if (!is_my_child(child_tid) || thread_waited_on ==  NULL)
+    if (!is_my_child(child_tid) || thread_waited_on == NULL)
     {
         return -1;
     }
@@ -215,18 +216,19 @@ int process_wait(tid_t child_tid UNUSED)
     {
         thread_waited_on->has_been_waited_on = true;
         // im thinkinh we check to make sure thay we have made this true;
-        if(!(thread_waited_on->has_been_waited_on)){
-        thread_waited_on->has_been_waited_on = false;
+        if (!(thread_waited_on->has_been_waited_on))
+        {
+            thread_waited_on->has_been_waited_on = false;
         }
-        else{
-        //thread_waited_on->has_been_waited_on = true;
-         sema_down(&thread_waited_on->exiting_thread); // wait for the child process to finish
-        int exit_code = thread_waited_on->exit_code;
-        sema_up(&thread_waited_on->reading_exit_status);
+        else
+        {
+            // thread_waited_on->has_been_waited_on = true;
+            sema_down(&thread_waited_on->exiting_thread); // wait for the child process to finish
+            int exit_code = thread_waited_on->exit_code;
+            sema_up(&thread_waited_on->reading_exit_status);
 
-        return exit_code;       
+            return exit_code;
         }
-
     }
     return -1;
     // 3. needs to properly wait
@@ -238,16 +240,15 @@ void process_exit(void)
 {
     struct thread *cur = thread_current();
     uint32_t *pd;
-/*
-*
-*  1. We need to free all memory that our parent allocated to us when we were created.
-!   remove vm_entries when the process exits
+    /*
+    *
+    *  1. We need to free all memory that our parent allocated to us when we were created.
+    !   remove vm_entries when the process exits
 
-*   palloc_free_page(cur -> fd);
-*    ! Add vm entry delete function
-*   pd = cur -> pagedir;
-*/
-
+    *   palloc_free_page(cur -> fd);
+    *    ! Add vm entry delete function
+    *   pd = cur -> pagedir;
+    */
 
     printf("%s: exit(%d)\n", cur->name, cur->exit_code);
 
@@ -584,8 +585,7 @@ validate_segment(const struct Elf32_Phdr *phdr, struct file *file)
  * Return true if successful, false if a memory allocation error
  * or disk read error occurs. */
 static bool
-load_segment(struct file *file, off_t ofs, uint8_t *upage,
-             uint32_t read_bytes, uint32_t zero_bytes, bool writable)
+load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, uint32_t zero_bytes, bool writable)
 {
     ASSERT((read_bytes + zero_bytes) % PGSIZE == 0);
     ASSERT(pg_ofs(upage) == 0);
@@ -602,24 +602,29 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
         size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
+// this is javie thots
+struct thread *curr = thread_current();
+ASSERT(pagedir_get_page(curr->pagedir,upage) == NULL); // No virtual page
+
         /* Get a page of memory. */
-        uint8_t *kpage = palloc_get_page(PAL_USER);
-        if (kpage == NULL)
-        {
-            return false;
-        }
+    uint8_t *kpage = palloc_get_page(PAL_USER);
+    if (kpage == NULL)
+    {
+        return false;
+    }
 
-        /*
-        ! Delete this section 
-        */
 
-        /* Load this page. */
-        if (file_read(file, kpage, page_read_bytes) != (int)page_read_bytes)
-        {
-            palloc_free_page(kpage);
-            return false;
-        }
-        memset(kpage + page_read_bytes, 0, page_zero_bytes);
+/* Load the page were on*/
+
+
+
+    if(file_read(file, kpage, page_read_bytes)!= page_read_bytes){
+
+      palloc_free_page(kpage);
+      return false;
+    }
+
+    memset(kpage + page_read_bytes, 0, page_zero_bytes);
 
         /* Add the page to the process's address space. */
         if (!install_page(upage, kpage, writable))
@@ -627,9 +632,8 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
             palloc_free_page(kpage);
             return false;
         }
-        /*
-        ! Delete this section
-        */
+
+        // struct Supplemental_Page_Table *spte = malloc(sizeof*(spte));
 
         /* Advance. */
         read_bytes -= page_read_bytes;
@@ -748,16 +752,17 @@ install_page(void *upage, void *kpage, bool writable)
 }
 
 /*
-! How to Include in the .h file for 
+ Desciption
 */
-
-bool handle_mm_fault(struct Supplemental_Page_Table *spte){
-
+bool handle_mm_fault(struct Supplemental_Page_Table *spte);
+bool handle_mm_fault(struct Supplemental_Page_Table *spte)
+{
+return false;
     /*
         When a page fault occurs, allocate physical memory
         Load file in the disk to physical moemory
         Use load_file(void* kaddr, struct vm_entry *vme)
         Update the associated poge table entry ater loading into physical memory
-        Use static bool install_page(void *upage, void *kpage, bool writable) 
+        Use static bool install_page(void *upage, void *kpage, bool writable)
     */
 }

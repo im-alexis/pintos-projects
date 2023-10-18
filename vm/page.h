@@ -1,7 +1,22 @@
 #ifndef VM_PAGE_H
 #define VM_PAGE_H
 
+
+#include <debug.h>
+#include <inttypes.h>
+#include <round.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+#include "vm/frame.h"
+#include "vm/page.h"
+
+#include "filesys/directory.h"
 #include "lib/kernel/hash.h"
+
+
 // from Ed Discussion we declared the SPTE struct 
 
 
@@ -17,7 +32,7 @@ enum page_location{
     // the status in page.c will tell the frame (in a switch case) what direction to go: SWAP, MEMORY, DISK
 };
 
-struct Supplementary_Page_Table{
+struct Supplemental_Page_Table{
 struct hash_elm *hash_elem;
 /*
 
@@ -33,7 +48,7 @@ enum page_location status;
 
 };
 
-bool load_file(void* kaddr, struct Supplementary_Page_Table *spte);
+bool load_file(void* kaddr, struct Supplemental_Page_Table *spte);
 
 
 #endif

@@ -101,7 +101,7 @@ struct thread
     struct thread *parent;
     struct semaphore process_semma;
     struct hash spt_hash; // Hash Table to manage virtual address space of thread
-    struct Supplementary_Page_Table *entry;
+    struct Supplemental_Page_Table *entry;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir; /* Page directory. */

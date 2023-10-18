@@ -20,7 +20,7 @@ static bool setup_stack(void **esp, int argc, char *argv[])
  After physical memory alloction, load the file page from the disk to physical memory
 
 */
-bool load_file(void* kaddr, struct Supplementary_Page_Table *spte){
+bool load_file(void* kaddr, struct Supplemental_Page_Table *spte){
 
      
      /* .
