@@ -148,7 +148,10 @@ start_process(void *file_name_)
 
     // hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp); // checking if the stack was set up correctly
 
-    asm volatile("movl %0, %%esp; jmp intr_exit" : : "g"(&if_) : "memory");
+    asm volatile("movl %0, %%esp; jmp intr_exit"
+                 :
+                 : "g"(&if_)
+                 : "memory");
     NOT_REACHED();
 }
 /*
@@ -580,6 +583,10 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
             return false;
         }
 
+        /*
+        ! Delete this section
+        */
+
         /* Load this page. */
         if (file_read(file, kpage, page_read_bytes) != (int)page_read_bytes)
         {
@@ -594,6 +601,9 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
             palloc_free_page(kpage);
             return false;
         }
+        /*
+        ! Delete this section
+        */
 
         /* Advance. */
         read_bytes -= page_read_bytes;
@@ -685,6 +695,10 @@ setup_stack(void **esp, int argc, char *argv[])
         }
         // hex_dump(*(int *)esp, *esp, 128, true); // NOTE: uncomment this to check arg passing
     }
+
+    /* Create vm entry*/
+    /* Set up vm_entry*/
+    /* Using insert_vme(), add vm_entry to hash table*/
     return success;
 }
 
@@ -706,3 +720,15 @@ install_page(void *upage, void *kpage, bool writable)
      * address, then map our page there. */
     return pagedir_get_page(t->pagedir, upage) == NULL && pagedir_set_page(t->pagedir, upage, kpage, writable);
 }
+
+/*
+? Create
+bool handle_mm_fault(struct Supplemental_Page_Table *spt){
+
+    When a page fault occurs, allocate physical memory
+    Load file in the disk to physical moemory
+        Use load_file(void* kaddr, struct vm_entry *vme)
+    Update the associated poge table entry ater loading into physical memory
+        Use static bool install_page()
+}
+*/
