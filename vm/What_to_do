@@ -1,0 +1,79 @@
+Note: Do not implement memory mapped files
+
+Here are some notes on specific components of the VM project in Pintos:
+
+Lazy Loading
+Work on Lazy Loading first. The crux of your work to do this will be in load_segment (process.c) and page_fault handler (exception.c). 
+Most OSs will load the first page and lazy load the rest. (Note lazy loading does not apply to the stack page in setup_stack).
+ In my implementation I did not bother even loading the first page. I lazy load everything because it makes my code easier to write. 
+ Of course this means you will immediately page-fault once the process runs but that is handled like any other page that is lazy loaded.
+ Here then is the essence of lazy-loading: You will see that load_segment code currently looks like this:
+
+
+**This is in process.c** 
+
+/* Get a page of memory. */
+  uint8_t *kpage = palloc_get_page (PAL_USER);
+  if (kpage == NULL)
+    return false;
+
+ /* Load this page. */
+  if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
+    {
+      palloc_free_page (kpage);
+      return false; 
+    }
+  memset (kpage + page_read_bytes, 0, page_zero_bytes);
+
+ /* Add the page to the process's address space. */
+  if (!install_page (upage, kpage, writable)) 
+    {
+      palloc_free_page (kpage);
+      return false; 
+    }
+
+ /* Advance. */
+  read_bytes -= page_read_bytes;
+  zero_bytes -= page_zero_bytes;
+  upage += PGSIZE;
+
+You want to split this code into two parts. /* Advance */stays here but the rest moves in some form to the page_fault handler for now. In other words, 
+the actual reading of the virtual-page’s contents is put off till a page-fault occurs. So, ask yourself how do those three calls (file_read, memset and install_page) 
+in the code that moved to the page_fault handler work without the information they need to function? The SPT is the link. You put this information into a SPTE 
+(SPT entry) for this page now, so it can be retrieved inside the page_fault handler later. This informs you as to what needs to go into each SPTE entry in the SPT.
+ There is one small thing that you may have observed here. We did not copy the contents from the disk, but we did allocate a page. True lazy-loading should put off 
+ the allocation also till the actual page’s contents are read from the disk. You can take care of this eventually but for now just keep track of the allocated page 
+ in the SPTE.  So, page.h is where you will declare the SPTE struct and the thread structure will have a table (I recommend using a hash here) of these entries. 
+ To use a hash, you will need to specify two things, a hashing function and a compare function to pair of elements. (checkout the hasDemo example on Canvas). 
+ This will also save you from knowing how big the table should be, as the hashtable can grow automatically as you add entries.
+ Once you complete lazy loading, all of the tests from userprog should pass with lazy-loading in place.
+
+Frame Allocator
+(frame.c and frame.h)
+ This is the second task in the VM project. As discussed in class, right now your palloc_get_page requests are serviced by a simple allocator (see threads/palloc.c) 
+ that gives the next available frame in the user pool (or kernel pool) depending on the argument passed(PAL_USER:User or 0: Kernel). Your Frame allocator will grab 
+ all the User pool frames on startup (frame_init in frame.c called from main in init.c). If you look into palloc.c, you will find that they use a bitmap to keep 
+ track of the free/used frames. We want to keep more information per frame than just one bit, so we create a struct called FTE (frame table entry) and a list/hash of 
+ these track the user pool frames. Now, you can replace all calls to palloc_get_page(PAL_USER..) with calls to your frame_get function which allocates a frame from the 
+ user pool. You will note there are ONLY two calls you have to worry about, the first is in load_segment which we saw above and the second is in setup_stack. 
+ Both calls need to make sure they are followed by an update to the thread’s SPT to reflect the allocation. At this point you will ensure that ALL calls to frame_get 
+ will succeed. That is, you will implement an eviction algorithm (Clock) to evict a a frame if you run out of free frames in the user pool.
+
+Stack Growth
+(frame.c and frame.h) creating our own hash
+When a user program accesses locations just above its stack pointer (esp) but within the page in which the esp points, there is no page-fault. However, say you are at 
+the boundary of a page and you access a byte just above the boundary, this will cause a page-fault. This is when the OS (in the pagefault handler) grows the stack by 
+one page. The question though is who is the “you” whose access triggered the page-fault? It could be the thread or the OS executing a system call on behalf of the
+thread. The esp inside the intr_frame passed to page-fault handler tells you whose access caused the page-fault. The stack that needs to be grown though is always 
+the thread’s stack. So, how do we get the thread’s stack inside the page-fault handler. We can surely get the thread’s tcb, but it does not have the esp there!! So, 
+you should add a esp pointer to struct thread and set its value when the thread enters the OS through a syscall. That is, when the thread makes a syscall, the 
+intr_frame passed to the syscall_handler has the thread’s stack pointer in it. Simply, copy it to the current thread’s tcb.
+
+Swap Space
+(swap.c and swap.h)
+The swap device is accessed by invoking the block_get_role function with BLOCK_SWAP as the input that returns a pointer to the device. All calls to access the swap 
+take this pointer as input. The function block_size gives you the size of the swap area in units of sectors (each of size BLOCK_SECTOR_SIZE=512). So, each swap slot 
+will be PGSIZE / BLOCK_SECTOR_SIZE (=4KiB/512B = 8) sectors. Create a bitmap of length block_size/8 to keep track of the slots. Now, each request for a swap slot will 
+update the bitmap and each swap-slot read or write will invoke 8 calls to block_read or 8 calls to block_write respectively. You could use an array to keep track of 
+the swap-slots but given that you will be using just 1-bit, all the other bits of each element of the array will be a waste. Also, you will now need to write your 
+own search for a free-slot code.

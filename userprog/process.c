@@ -23,6 +23,8 @@
 
 #include <log.h>
 
+#include "vm/page.h"
+
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
 
@@ -97,6 +99,11 @@ tid_t process_execute(const char *file_name)
 static void
 start_process(void *file_name_)
 {
+    /*
+    *
+    * Initialize the set of vm_entries (hash table)
+    * 
+    */
     char *file_name = file_name_;
     struct intr_frame if_;
     bool success;
@@ -199,7 +206,7 @@ int process_wait(tid_t child_tid UNUSED)
 {
     struct thread *thread_waited_on = find_thread_by_tid(child_tid);
 
-    if (!is_my_child(child_tid) || thread_waited_on == NULL)
+    if (!is_my_child(child_tid) || thread_waited_on ==  NULL)
     {
         return -1;
     }
@@ -207,11 +214,19 @@ int process_wait(tid_t child_tid UNUSED)
     if (!(thread_waited_on->has_been_waited_on))
     {
         thread_waited_on->has_been_waited_on = true;
-        sema_down(&thread_waited_on->exiting_thread); // wait for the child process to finish
+        // im thinkinh we check to make sure thay we have made this true;
+        if(!(thread_waited_on->has_been_waited_on)){
+        thread_waited_on->has_been_waited_on = false;
+        }
+        else{
+        //thread_waited_on->has_been_waited_on = true;
+         sema_down(&thread_waited_on->exiting_thread); // wait for the child process to finish
         int exit_code = thread_waited_on->exit_code;
         sema_up(&thread_waited_on->reading_exit_status);
 
-        return exit_code;
+        return exit_code;       
+        }
+
     }
     return -1;
     // 3. needs to properly wait
@@ -223,6 +238,17 @@ void process_exit(void)
 {
     struct thread *cur = thread_current();
     uint32_t *pd;
+/*
+*
+*  1. We need to free all memory that our parent allocated to us when we were created.
+!   remove vm_entries when the process exits
+
+*   palloc_free_page(cur -> fd);
+*    ! Add vm entry delete function
+*   pd = cur -> pagedir;
+*/
+
+
     printf("%s: exit(%d)\n", cur->name, cur->exit_code);
 
     /* Destroy the current process's page directory and switch back
@@ -584,7 +610,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         }
 
         /*
-        ! Delete this section
+        ! Delete this section 
         */
 
         /* Load this page. */
@@ -722,13 +748,16 @@ install_page(void *upage, void *kpage, bool writable)
 }
 
 /*
-? Create
-bool handle_mm_fault(struct Supplemental_Page_Table *spt){
-
-    When a page fault occurs, allocate physical memory
-    Load file in the disk to physical moemory
-        Use load_file(void* kaddr, struct vm_entry *vme)
-    Update the associated poge table entry ater loading into physical memory
-        Use static bool install_page()
-}
+! How to Include in the .h file for 
 */
+
+bool handle_mm_fault(struct Supplemental_Page_Table *spte){
+
+    /*
+        When a page fault occurs, allocate physical memory
+        Load file in the disk to physical moemory
+        Use load_file(void* kaddr, struct vm_entry *vme)
+        Update the associated poge table entry ater loading into physical memory
+        Use static bool install_page(void *upage, void *kpage, bool writable) 
+    */
+}

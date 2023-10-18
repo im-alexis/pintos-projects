@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include "synch.h"
 #include "filesys/file.h"
+#include "lib/kernel/hash.h"
+#include "vm/page.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -96,9 +98,10 @@ struct thread
     char *executing_file;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem; /* List element. */
-
     struct thread *parent;
     struct semaphore process_semma;
+    struct hash spt_hash; // Hash Table to manage virtual address space of thread
+    struct Supplementary_Page_Table *entry;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir; /* Page directory. */
@@ -112,9 +115,7 @@ struct thread
     */
     struct semaphore exiting_thread;      /* For when the thread is exiting*/
     struct semaphore reading_exit_status; /* To make sure the parent can read the exit status of the child*/
-
     int exit_code; /* Holds the exit status for the thread*/
-
     struct file *file_descriptor_table[MAX_FD]; /* Holds File Descriptors per process*/
     int fdt_index;
     int how_many_fd; /* Is the index to the next file descriptor */
