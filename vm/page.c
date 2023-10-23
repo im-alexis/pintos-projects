@@ -34,7 +34,8 @@ bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
     *  Pad 0 as much as zero_bytes
     *  if file is loaded to memory, return true
     */
-    return false;
+
+       return false;
 }
 bool page_hash(const struct hash_elem *p_, void *aux)
 {
@@ -62,11 +63,11 @@ void setup_spte(void *kpage)
     struct thread *curr = thread_current();
 
     struct Supplemental_Page_Table_Entry *spte = malloc(sizeof(struct Supplemental_Page_Table_Entry));
-    spte->kaddr = NULL;                /* Kernel pages are 1-to-1 with frame? */
-    spte->uaddr = kpage;               /* Passed in PAL_USER Flag into that */
-    spte->status = DISK;               /* Maybe, cuz it has not been loaded yet */
-    spte->dirty = false;               /* Still clean i guess */
-    int hash_key = ((int)kpage) >> 12; /* Making page# the key for hash*/
+    spte->kaddr = NULL;                          /* Kernel pages are 1-to-1 with frame? */
+    spte->uaddr = kpage;                         /* Passed in PAL_USER Flag into that */
+    spte->status = DISK;                         /* Maybe, cuz it has not been loaded yet */
+    spte->dirty = false;                         /* Still clean i guess */
+    uint32_t hash_key = ((uint32_t)kpage) >> 12; /* Making page # (20 bits) the key for hash*/
     spte->key = hash_key;
 
     hash_insert(&curr->spt_hash, &spte->hash_elem);
@@ -81,8 +82,7 @@ void setup_spte(void *kpage)
  * with palloc_get_page().
  * Returns true on success, false if UPAGE is already mapped or
  * if memory allocation fails. */
-static bool
-install_page(void *upage, void *kpage, bool writable)
+bool install_page(void *upage, void *kpage, bool writable)
 {
     struct thread *t = thread_current();
 

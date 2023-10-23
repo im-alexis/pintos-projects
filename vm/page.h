@@ -41,7 +41,7 @@ struct Supplemental_Page_Table_Entry
     void *uaddr; /* Key */
     void *kaddr;
 
-    int key; /* Key */
+    uint32_t key; /* Key */
 
     enum page_location status;
     bool dirty;
@@ -52,6 +52,6 @@ bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte);
 bool page_hash(const struct hash_elem *p_, void *aux);
 bool page_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux);
 void setup_spte(void *kpage);
-static bool install_page(void *upage, void *kpage, bool writable);
+bool install_page(void *upage, void *kpage, bool writable);
 
 #endif
