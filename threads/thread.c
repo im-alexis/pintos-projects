@@ -6,6 +6,7 @@
 
 #include "lib/stdio.h"
 #include "filesys/filesys.h"
+#include "vm/page.h"
 
 #include "threads/flags.h"
 #include "threads/interrupt.h"
@@ -483,7 +484,9 @@ init_thread(struct thread *t, const char *name, int priority)
     t->priority = priority;
     t->magic = THREAD_MAGIC;
 
-    /* EXPERIMENTAL CODE */
+    /*
+   ? Additions made to code, when intialization of thread
+    */
 
     t->has_been_waited_on = false;
     /* Don't know how to set up the descriptor table as of yet */
@@ -507,8 +510,10 @@ init_thread(struct thread *t, const char *name, int priority)
     /*Initialize the list of all threads f*/
     list_init(&t->all_process_list);
     list_push_back(&t->all_process_list, &t->allelem);
-    // list_
-    /* EXPERIMENTAL CODE */
+
+    /*
+    ? Additions made to code, when intialization of thread
+     */
 
     old_level = intr_disable();
     list_push_back(&all_list, &t->allelem);

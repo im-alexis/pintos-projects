@@ -25,6 +25,7 @@
 #include <log.h>
 
 #include "vm/page.h"
+#include "threads/thread.h"
 
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
@@ -86,6 +87,10 @@ tid_t process_execute(const char *file_name)
     }
     list_push_back(&cur->mis_ninos, &thread->chld_thrd_elm);
     thread->parent = cur;
+    /*
+    ! THIS COULD BE NEW SPOT FOR THREAD INIT STUFF
+    */
+    hash_init(&thread->spt_hash, page_hash, page_less, NULL); /* Initialization of HASH, NOT SURE IF THIS IS THE SPOT */
 
     if (tid == TID_ERROR)
     {
@@ -507,7 +512,7 @@ done:
 
 /* load() helpers. */
 
-static bool install_page(void *upage, void *kpage, bool writable);
+// static bool install_page(void *upage, void *kpage, bool writable);
 
 /* Checks whether PHDR describes a valid, loadable segment in
  * FILE and returns true if so, false otherwise. */
@@ -602,38 +607,56 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, 
         size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
         size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-// this is javie thots
-struct thread *curr = thread_current();
-ASSERT(pagedir_get_page(curr->pagedir,upage) == NULL); // No virtual page
+        // this is javie thots
+        struct thread *curr = thread_current();
+        ASSERT(pagedir_get_page(curr->pagedir, upage) == NULL); // No virtual page
 
         /* Get a page of memory. */
-    uint8_t *kpage = palloc_get_page(PAL_USER);
-    if (kpage == NULL)
-    {
-        return false;
-    }
-
-
-/* Load the page were on*/
-
-
-
-    if(file_read(file, kpage, page_read_bytes)!= page_read_bytes){
-
-      palloc_free_page(kpage);
-      return false;
-    }
-
-    memset(kpage + page_read_bytes, 0, page_zero_bytes);
-
-        /* Add the page to the process's address space. */
-        if (!install_page(upage, kpage, writable))
+        void *kpage = palloc_get_page(PAL_USER); /*Switched it to void*/
+        if (kpage == NULL)
         {
-            palloc_free_page(kpage);
             return false;
         }
 
-        // struct Supplemental_Page_Table *spte = malloc(sizeof*(spte));
+        setup_spte(kpage); /* Adds kpage virtual address to hash table of the curernt process*/
+
+        // /*
+        //  * Initialized an entry for a SPT entry for the process
+        //  */
+        // struct Supplemental_Page_Table_Entry *spte = malloc(sizeof(struct Supplemental_Page_Table_Entry));
+        // spte->kaddr = NULL;                /* Kernel pages are 1-to-1 with frame? */
+        // spte->uaddr = kpage;               /* Passed in PAL_USER Flag into that */
+        // spte->status = DISK;               /* Maybe, cuz it has not been loaded yet */
+        // spte->dirty = false;               /* Still clean i guess */
+        // int hash_key = ((int)kpage) >> 12; /* Making page# the key for hash*/
+        // spte->key = hash_key;
+
+        // /*
+        //  * Inseting into Hash Table of the current process
+        //  */
+        // hash_insert(&curr->spt_hash, &spte->hash_elem);
+
+        /*
+        ! Delete this section
+        */
+
+        /* Load this page. */
+        // if (file_read(file, kpage, page_read_bytes) != (int)page_read_bytes)
+        // {
+        //     palloc_free_page(kpage);
+        //     return false;
+        // }
+        // memset(kpage + page_read_bytes, 0, page_zero_bytes);
+
+        // /* Add the page to the process's address space. */
+        // if (!install_page(upage, kpage, writable))
+        // {
+        //     palloc_free_page(kpage);
+        //     return false;
+        // }
+        /*
+        ! Delete this section
+        */
 
         /* Advance. */
         read_bytes -= page_read_bytes;
@@ -717,6 +740,8 @@ setup_stack(void **esp, int argc, char *argv[])
             (*(int *)(*esp)) = 0; // put the return address at the end
 
             /*USER STACK SHOULD BE SETUP BY NOW*/
+            struct thread *cur = thread_current();
+            cur->stack_pointer = esp;
         }
 
         else
@@ -732,32 +757,13 @@ setup_stack(void **esp, int argc, char *argv[])
     return success;
 }
 
-/* Adds a mapping from user virtual address UPAGE to kernel
- * virtual address KPAGE to the page table.
- * If WRITABLE is true, the user process may modify the page;
- * otherwise, it is read-only.
- * UPAGE must not already be mapped.
- * KPAGE should probably be a page obtained from the user pool
- * with palloc_get_page().
- * Returns true on success, false if UPAGE is already mapped or
- * if memory allocation fails. */
-static bool
-install_page(void *upage, void *kpage, bool writable)
-{
-    struct thread *t = thread_current();
-
-    /* Verify that there's not already a page at that virtual
-     * address, then map our page there. */
-    return pagedir_get_page(t->pagedir, upage) == NULL && pagedir_set_page(t->pagedir, upage, kpage, writable);
-}
-
 /*
  Desciption
 */
-bool handle_mm_fault(struct Supplemental_Page_Table *spte);
-bool handle_mm_fault(struct Supplemental_Page_Table *spte)
+bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte);
+bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte)
 {
-return false;
+    return false;
     /*
         When a page fault occurs, allocate physical memory
         Load file in the disk to physical moemory

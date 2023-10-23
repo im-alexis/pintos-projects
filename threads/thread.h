@@ -95,31 +95,28 @@ struct thread
     int priority;                 /* Priority. */
     struct list_elem allelem;     /* List element for all threads list. */
     struct list all_process_list; /* So that the thread can access all other threads*/
-    char *executing_file;
+    char *executing_file;         /* Holds the name of the executing file, might switch to actual file, but IDK */
     /* Shared between thread.c and synch.c. */
-    struct list_elem elem; /* List element. */
-    struct thread *parent;
-    struct semaphore process_semma;
-    struct hash spt_hash; // Hash Table to manage virtual address space of thread
-    struct Supplemental_Page_Table *entry;
+    struct list_elem elem;          /* List element. */
+    struct thread *parent;          /* The parant of this thread. */
+    struct semaphore process_semma; /* Semaphore when calling start_process/process_execute combo. */
+    struct hash spt_hash;           /* Hash Table to manage virtual address space of thread */
+
+    void *stack_pointer;
+
+    // struct Supplemental_Page_Table_Entry *entry; -> Don't think we need
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
-    uint32_t *pagedir; /* Page directory. */
 
-    /*
-    Need to inititalize
-     1. file_descriptor_table -> make of size 20
-     2. fdt_index -> make default 3 (STDIN (0), STDOUT (1), STDERR (2) ....)
-     3. Semaphores?
-     4. has_been_waited_one
-    */
-    struct semaphore exiting_thread;      /* For when the thread is exiting*/
-    struct semaphore reading_exit_status; /* To make sure the parent can read the exit status of the child*/
-    int exit_code; /* Holds the exit status for the thread*/
+    uint32_t *pagedir;                          /* Page directory. */
+    struct semaphore exiting_thread;            /* For when the thread is exiting*/
+    struct semaphore reading_exit_status;       /* To make sure the parent can read the exit status of the child*/
+    int exit_code;                              /* Holds the exit status for the thread*/
     struct file *file_descriptor_table[MAX_FD]; /* Holds File Descriptors per process*/
-    int fdt_index;
-    int how_many_fd; /* Is the index to the next file descriptor */
-    struct list mis_ninos;
+    int fdt_index;                              /* Is the index to the next file descriptor */
+    int how_many_fd;                            /* Runnning count of how many files this process has open*/
+    struct list mis_ninos;                      /* List of child process belonging to this process */
     struct list_elem chld_thrd_elm;
     bool has_been_waited_on; /* Simple flag to check if a child was waited on or not*/
 

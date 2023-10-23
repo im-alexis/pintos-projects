@@ -7,6 +7,11 @@
 #include "userprog/gdt.h"
 #include "process.h"
 
+#include "vm/page.h"
+#include "threads/thread.h"
+#include "lib/kernel/hash.h"
+#include "threads/vaddr.h"
+
 /* Number of page faults processed. */
 static long long page_fault_cnt;
 
@@ -138,6 +143,9 @@ page_fault(struct intr_frame *f)
     /* Turn interrupts back on (they were only off so that we could
      * be assured of reading CR2 before it changed). */
     intr_enable();
+    struct thread *cur = thread_current();
+    struct hash_elem *e;
+    struct Supplemental_Page_Table_Entry scratch;
 
     /* Count page faults. */
     page_fault_cnt++;
@@ -152,6 +160,21 @@ page_fault(struct intr_frame *f)
     Call a install page ??
     */
 
+    scratch.key = ((int)fault_addr) >> 12;
+    e = hash_find(&cur, &scratch.hash_elem);
+    if (e != NULL)
+    {
+        struct Supplemental_Page_Table_Entry *result = hash_entry(e, struct Supplemental_Page_Table_Entry, hash_elem);
+
+        /*
+         * Load the Page
+         */
+
+        // load_file(fault_addr, &cur->spt_hash);
+        // memset(kpage + page_read_bytes, 0, page_zero_bytes);
+        install_page(((uint8_t *)PHYS_BASE) - PGSIZE, fault_addr, true);
+    }
+done:
     f->eip = f->eax;
     f->eax = 0xffffffff;
 
