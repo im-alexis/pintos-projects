@@ -6,37 +6,8 @@
 #include "lib/kernel/hash.h"
 #include "vm/page.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 
-/*
- & INSERT DESCRIPTION
-
-*/
-
-static bool setup_stack(void **esp, int argc, char *argv[])
-{
-
-    return false;
-}
-
-/*
- & INSERT DESCRIPTION
- After physical memory alloction, load the file page from the disk to physical memory
-
-*/
-bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
-{
-
-    /* .
-    ! Should be change it to load_page?
-    * Using file_read_at()
-    * Write physical memory as much as read_bytes by file_read_at
-    *  Return file_read_at status
-    *  Pad 0 as much as zero_bytes
-    *  if file is loaded to memory, return true
-    */
-
-       return false;
-}
 bool page_hash(const struct hash_elem *p_, void *aux)
 {
     const struct Supplemental_Page_Table_Entry *p = hash_entry(p_, struct Supplemental_Page_Table_Entry, hash_elem);
@@ -52,6 +23,35 @@ bool page_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux
     const struct Supplemental_Page_Table_Entry *b = hash_entry(b_, struct Supplemental_Page_Table_Entry, hash_elem);
 
     return a->key < b->key;
+}
+
+/*
+& INSERT DESCRIPTION
+! Not Sure what for
+*/
+
+static bool setup_stack(void **esp, int argc, char *argv[])
+{
+
+    return false;
+}
+
+/*
+ After physical memory alloction, load the file page from the disk to physical memory
+*/
+bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
+{
+
+    /* .
+    ! Should be change it to load_page?
+    * Using file_read_at()
+    * Write physical memory as much as read_bytes by file_read_at
+    *  Return file_read_at status
+    *  Pad 0 as much as zero_bytes
+    *  if file is loaded to memory, return true
+    */
+
+    return false;
 }
 
 /*
@@ -89,4 +89,24 @@ bool install_page(void *upage, void *kpage, bool writable)
     /* Verify that there's not already a page at that virtual
      * address, then map our page there. */
     return pagedir_get_page(t->pagedir, upage) == NULL && pagedir_set_page(t->pagedir, upage, kpage, writable);
+}
+
+/*
+ Desciption
+*/
+
+bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte)
+{
+    load_file(spte->kaddr, spte); /* Would do the loading*/
+
+    install_page(((uint8_t *)PHYS_BASE) - PGSIZE, spte->kaddr, true);
+    spte->status = MEMORY;
+    return false;
+    /*
+        When a page fault occurs, allocate physical memory
+        Load file in the disk to physical moemory
+        Use load_file(void* kaddr, struct vm_entry *vme)
+        Update the associated poge table entry ater loading into physical memory
+        Use static bool install_page(void *upage, void *kpage, bool writable)
+    */
 }

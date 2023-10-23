@@ -10,7 +10,6 @@
 #include "vm/page.h"
 #include "threads/thread.h"
 #include "lib/kernel/hash.h"
-#include "threads/vaddr.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -156,9 +155,8 @@ page_fault(struct intr_frame *f)
     user = (f->error_code & PF_U) != 0;
 
     /*
-    *Check for validity
-    Call a install page ??
-    */
+     *Check for validity
+     */
     if (not_present)
     {
         scratch.key = ((uint32_t)fault_addr) >> 12;
@@ -166,14 +164,7 @@ page_fault(struct intr_frame *f)
         if (e != NULL)
         {
             struct Supplemental_Page_Table_Entry *result = hash_entry(e, struct Supplemental_Page_Table_Entry, hash_elem);
-
-            /*
-             * Load the Page
-             */
-
-            // load_file(fault_addr, &cur->spt_hash);
-            // memset(kpage + page_read_bytes, 0, page_zero_bytes);
-            install_page(((uint8_t *)PHYS_BASE) - PGSIZE, fault_addr, true);
+            handle_mm_fault(&result);
         }
     }
 

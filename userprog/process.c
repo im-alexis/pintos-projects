@@ -756,19 +756,3 @@ setup_stack(void **esp, int argc, char *argv[])
     /* Using insert_vme(), add vm_entry to hash table*/
     return success;
 }
-
-/*
- Desciption
-*/
-bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte);
-bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte)
-{
-    return false;
-    /*
-        When a page fault occurs, allocate physical memory
-        Load file in the disk to physical moemory
-        Use load_file(void* kaddr, struct vm_entry *vme)
-        Update the associated poge table entry ater loading into physical memory
-        Use static bool install_page(void *upage, void *kpage, bool writable)
-    */
-}
