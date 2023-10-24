@@ -597,7 +597,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, 
     ASSERT(ofs % PGSIZE == 0);
 
     log(L_TRACE, "load_segment()");
-
+    printf("upage in load_seg: [%04x]\n", upage);
     file_seek(file, ofs);
     while (read_bytes > 0 || zero_bytes > 0)
     {
@@ -606,20 +606,23 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, 
          * and zero the final PAGE_ZERO_BYTES bytes. */
         size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
         size_t page_zero_bytes = PGSIZE - page_read_bytes;
-
-        // this is javie thots
+        // #ifdef vm
+        //  this is javie thots
         struct thread *curr = thread_current();
         ASSERT(pagedir_get_page(curr->pagedir, upage) == NULL); // No virtual page
 
         /* Get a page of memory. */
-        void *kpage = palloc_get_page(PAL_USER); /*Switched it to void*/
-        if (kpage == NULL)
-        {
-            return false;
-        }
-
-        setup_spte(kpage); /* Adds kpage virtual address to hash table of the curernt process*/
-
+        // void *kpage = palloc_get_page(PAL_USER); /*Switched it to void*/
+        // if (kpage == NULL)
+        // {
+        //     return false;
+        // }
+        struct Supplemental_Page_Table_Entry *spte = setup_spte(upage); /* Adds kpage virtual address to hash table of the curernt process*/
+        spte->file_backed = true;
+        spte->file = file;
+        spte->ofs = ofs;
+        spte->writable = writable;
+        spte->read_bytes = read_bytes;
         // /*
         //  * Initialized an entry for a SPT entry for the process
         //  */
@@ -657,11 +660,14 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, 
         /*
         ! Delete this section
         */
-
+        // #endif
         /* Advance. */
         read_bytes -= page_read_bytes;
         zero_bytes -= page_zero_bytes;
         upage += PGSIZE;
+#ifdef vm
+        ofs += PGSIZE;
+#endif
     }
     return true;
 }

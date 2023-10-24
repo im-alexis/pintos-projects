@@ -157,14 +157,26 @@ page_fault(struct intr_frame *f)
     /*
      *Check for validity
      */
-    if (not_present)
+    printf("Fault_Address in Exeception.c:[%08x]\n", fault_addr);
+    if (not_present) /* IDK ABOUT USER PARAM */
     {
         scratch.key = ((uint32_t)fault_addr) >> 12;
+        printf("Key in Exeception.c:[%04x]\n", scratch.key);
+
         e = hash_find(&cur->spt_hash, &scratch.hash_elem);
+        printf("e:[%d]\n", e);
         if (e != NULL)
         {
             struct Supplemental_Page_Table_Entry *result = hash_entry(e, struct Supplemental_Page_Table_Entry, hash_elem);
-            handle_mm_fault(&result);
+            printf("Key:[%04x] and Vaddr:[%04x]\n", result->key, result->uaddr);
+            bool ret = handle_mm_fault(&result);
+        }
+        else
+        {
+            f->eip = f->eax;
+            f->eax = 0xffffffff;
+
+            thread_exit(); // & JAVIER SAID THIS IS PROBABLY NEEDED 8)
         }
     }
 
@@ -172,7 +184,7 @@ done:
     f->eip = f->eax;
     f->eax = 0xffffffff;
 
-    thread_exit();
+    // thread_exit();
 
     // /* To implement virtual memory, delete the rest of the function
     //  * body, and replace it with code that brings in the page to
