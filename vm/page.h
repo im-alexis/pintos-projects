@@ -23,6 +23,13 @@ enum page_location
     DISK
     // the status in page.c will tell the frame (in a switch case) what direction to go: SWAP, MEMORY, DISK
 };
+enum Source
+{
+    ELF,     /* File Backed */
+    General, /* STACK or Variables?? */
+    Anymous
+    // the status in page.c will tell the frame (in a switch case) what direction to go: SWAP, MEMORY, DISK
+};
 
 struct Supplemental_Page_Table_Entry
 {
@@ -39,12 +46,21 @@ struct Supplemental_Page_Table_Entry
     bool dirty;                /* Was it written to */
     bool file_backed;
     struct file *file;
+
+    /*
+    & APEMAN MONEUVERS
+    */
+    off_t ofs;
+    uint32_t read_bytes;
+    uint32_t zero_bytes;
+    bool writable;
+    off_t current_file_pos; /* */
 };
 
 bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte);
 bool page_hash(const struct hash_elem *p_, void *aux);
 bool page_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux);
-void setup_spte(void *kpage);
+struct Supplemental_Page_Table_Entry *setup_spte(void *kpage);
 bool install_page(void *upage, void *kpage, bool writable);
 bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte);
 

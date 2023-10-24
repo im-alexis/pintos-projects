@@ -41,8 +41,7 @@ static bool setup_stack(void **esp, int argc, char *argv[])
 */
 bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
 {
-
-    /* .
+    /*
     ! Should be change it to load_page?
     * Using file_read_at()
     * Write physical memory as much as read_bytes by file_read_at
@@ -50,7 +49,19 @@ bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
     *  Pad 0 as much as zero_bytes
     *  if file is loaded to memory, return true
     */
-
+    if (spte->file_backed)
+    {
+        struct file *file = spte->file;
+        if (file != NULL)
+        {
+            size_t page_read_bytes = spte->read_bytes < PGSIZE ? spte->read_bytes : PGSIZE;
+            size_t page_zero_bytes = PGSIZE - page_read_bytes;
+            off_t bytes_read = file_read_at(file, kaddr, page_read_bytes, spte->ofs); /* maybe ideally */
+            spte->current_file_pos = spte->ofs + page_read_bytes;
+            memset(kaddr + page_read_bytes, 0, page_zero_bytes);
+            return true;
+        }
+    }
     return false;
 }
 
@@ -58,7 +69,7 @@ bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
  * Initialized an entry for a SPT entry with the virtual address kpage
  * Inseting into Hash Table of the current process
  */
-void setup_spte(void *kpage)
+struct Supplemental_Page_Table_Entry *setup_spte(void *kpage)
 {
     struct thread *curr = thread_current();
 
@@ -68,9 +79,13 @@ void setup_spte(void *kpage)
     spte->status = DISK;                         /* Maybe, cuz it has not been loaded yet */
     spte->dirty = false;                         /* Still clean i guess */
     uint32_t hash_key = ((uint32_t)kpage) >> 12; /* Making page # (20 bits) the key for hash*/
+    printf("Key goinging into HASH: [%04x]\n", hash_key);
     spte->key = hash_key;
+    spte->file_backed = false;
+    spte->file = NULL;
 
     hash_insert(&curr->spt_hash, &spte->hash_elem);
+    return spte;
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
@@ -99,7 +114,7 @@ bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte)
 {
     load_file(spte->kaddr, spte); /* Would do the loading*/
 
-    install_page(((uint8_t *)PHYS_BASE) - PGSIZE, spte->kaddr, true);
+    install_page(((uint8_t *)PHYS_BASE) - PGSIZE, spte->kaddr, spte->writable);
     spte->status = MEMORY;
     return false;
     /*
