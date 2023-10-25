@@ -97,6 +97,7 @@ args:
 
 bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call)
 {
+    printf("Address being validated in valid_ptr():[%08x]\n", addy);
     if (type_of_call == 1)
     {
         if (addy == NULL)
@@ -127,6 +128,7 @@ bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call)
 
 bool valid_ptr_v2(const void *addy)
 {
+    printf("Address being validated in valid_ptr_v2():[%08x]\n", addy);
     /* Check to see if the address is NULL, if it is valid for the user and that it is not below the start of virtual memory (0x08084000)  */
     if (!is_user_vaddr(addy) || addy == NULL || addy < (void *)0x08048000)
     {

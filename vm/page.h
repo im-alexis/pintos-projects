@@ -18,16 +18,16 @@
 
 enum page_location
 {
-    MEMORY,
-    SWAP,
-    DISK
+    MEMORY, /* ALL READY IN MEMORY, HAS A FRAME */
+    SWAP,   /* IN THE SWAP SPACE*/
+    DISK    /* FROM A FILE */
     // the status in page.c will tell the frame (in a switch case) what direction to go: SWAP, MEMORY, DISK
 };
-enum Source
+enum source
 {
-    ELF,     /* File Backed */
-    General, /* STACK or Variables?? */
-    Anymous
+    ELF,      /* File Backed */
+    GENERAL,  /* STACK or Variables?? */
+    ANONYMOUS /* IN the swap SPACE */
     // the status in page.c will tell the frame (in a switch case) what direction to go: SWAP, MEMORY, DISK
 };
 
@@ -40,28 +40,29 @@ struct Supplemental_Page_Table_Entry
     ! Uaddr and Kaddr (Done?? line 17 & 18)
     *Etc. (Don't know what this means)
     */
-    void *uaddr;               /* User Address - Virtual Page */
-    void *kaddr;               /* Kernel Address - Frame ?? */
-    enum page_location status; /* Where it currently is */
-    bool dirty;                /* Was it written to */
-    bool file_backed;
-    struct file *file;
+    void *uaddr;                 /* User Address - Virtual Page */
+    void *kaddr;                 /* Kernel Address - Frame ?? */
+    enum page_location location; /* Where it currently is */
+    enum source source;
+    bool dirty; /* Was it written to */
 
     /*
     & APEMAN MONEUVERS
     */
+    struct file *file;
     off_t ofs;
     uint32_t read_bytes;
-    uint32_t zero_bytes;
     bool writable;
-    off_t current_file_pos; /* */
 };
 
 bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte);
 bool page_hash(const struct hash_elem *p_, void *aux);
 bool page_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux);
 struct Supplemental_Page_Table_Entry *setup_spte(void *kpage);
+// struct Supplemental_Page_Table_Entry *setup_spte(uint8_t *kpage);
 bool install_page(void *upage, void *kpage, bool writable);
 bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte);
+struct Supplemental_Page_Table_Entry *find_spte(struct hash hash, void *addr);
+struct Supplemental_Page_Table_Entry *setup_spte_from_file(void *upage, struct file *file, off_t ofs, bool writable, uint32_t read_bytes);
 
 #endif

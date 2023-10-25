@@ -11,6 +11,10 @@
 #include "threads/thread.h"
 #include "lib/kernel/hash.h"
 
+#define LOGGING_LEVEL 6
+
+#include <log.h>
+
 /* Number of page faults processed. */
 static long long page_fault_cnt;
 
@@ -142,9 +146,11 @@ page_fault(struct intr_frame *f)
     /* Turn interrupts back on (they were only off so that we could
      * be assured of reading CR2 before it changed). */
     intr_enable();
+
     struct thread *cur = thread_current();
     struct hash_elem *e;
     struct Supplemental_Page_Table_Entry scratch;
+    struct Supplemental_Page_Table_Entry *spte;
 
     /* Count page faults. */
     page_fault_cnt++;
@@ -153,38 +159,51 @@ page_fault(struct intr_frame *f)
     not_present = (f->error_code & PF_P) == 0;
     write = (f->error_code & PF_W) != 0;
     user = (f->error_code & PF_U) != 0;
-
-    /*
-     *Check for validity
-     */
-    printf("Fault_Address in Exeception.c:[%08x]\n", fault_addr);
-    if (not_present) /* IDK ABOUT USER PARAM */
+    if (!not_present)
     {
-        scratch.key = ((uint32_t)fault_addr) >> 12;
-        printf("Key in Exeception.c:[%04x]\n", scratch.key);
+        // attempt to write to a read-only region is always killed.
+        goto BULL;
+    }
+    /*
+     * Check for validity
+     */
+    log(L_TRACE, "not_present:[%d] | write:[%d] | user:[%d]\n", not_present, write, user);
+    log(L_TRACE, "Thread_Name: %s\n", cur->name);
+    log(L_TRACE, "Fault_Address in Exeception.c:[%8x]\n", fault_addr);
 
-        e = hash_find(&cur->spt_hash, &scratch.hash_elem);
-        printf("e:[%d]\n", e);
-        if (e != NULL)
+    if (not_present && user) /* IDK ABOUT USER PARAM */
+    {
+        spte = find_spte(cur->spt_hash, fault_addr);
+        if (spte == NULL)
         {
-            struct Supplemental_Page_Table_Entry *result = hash_entry(e, struct Supplemental_Page_Table_Entry, hash_elem);
-            printf("Key:[%04x] and Vaddr:[%04x]\n", result->key, result->uaddr);
-            bool ret = handle_mm_fault(&result);
+            goto BULL;
         }
-        else
-        {
-            f->eip = f->eax;
-            f->eax = 0xffffffff;
 
-            thread_exit(); // & JAVIER SAID THIS IS PROBABLY NEEDED 8)
+        if (!handle_mm_fault(&spte))
+        {
+            goto BULL;
         }
+        log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in page_fault after handle_mm()\n", spte->kaddr, spte->uaddr);
+
+        return;
+    }
+    return;
+
+BULL:
+
+    if (!user) // kernel
+    {
+        f->eip = (void *)f->eax;
+        f->eax = 0xffffffff;
+        return;
     }
 
-done:
-    f->eip = f->eax;
-    f->eax = 0xffffffff;
+    // return;
+    log(L_TRACE, "IT WENT PASSED EVERYTHING, PAIN\n");
 
-    // thread_exit();
+    f->eip = (void *)f->eax;
+    f->eax = 0xffffffff;
+    thread_exit();
 
     // /* To implement virtual memory, delete the rest of the function
     //  * body, and replace it with code that brings in the page to

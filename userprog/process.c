@@ -611,33 +611,15 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, 
         struct thread *curr = thread_current();
         ASSERT(pagedir_get_page(curr->pagedir, upage) == NULL); // No virtual page
 
-        /* Get a page of memory. */
-        // void *kpage = palloc_get_page(PAL_USER); /*Switched it to void*/
-        // if (kpage == NULL)
-        // {
-        //     return false;
-        // }
-        struct Supplemental_Page_Table_Entry *spte = setup_spte(upage); /* Adds kpage virtual address to hash table of the curernt process*/
-        spte->file_backed = true;
-        spte->file = file;
-        spte->ofs = ofs;
-        spte->writable = writable;
-        spte->read_bytes = read_bytes;
+        // struct Supplemental_Page_Table_Entry *spte = setup_spte((void *)upage); /* Adds kpage virtual address to hash table of the curernt process*/
+        // spte->source = ELF;
+        // spte->file = file;
+        // spte->ofs = ofs;
+        // spte->writable = writable;
+        // spte->read_bytes = read_bytes;
         // /*
-        //  * Initialized an entry for a SPT entry for the process
-        //  */
-        // struct Supplemental_Page_Table_Entry *spte = malloc(sizeof(struct Supplemental_Page_Table_Entry));
-        // spte->kaddr = NULL;                /* Kernel pages are 1-to-1 with frame? */
-        // spte->uaddr = kpage;               /* Passed in PAL_USER Flag into that */
-        // spte->status = DISK;               /* Maybe, cuz it has not been loaded yet */
-        // spte->dirty = false;               /* Still clean i guess */
-        // int hash_key = ((int)kpage) >> 12; /* Making page# the key for hash*/
-        // spte->key = hash_key;
 
-        // /*
-        //  * Inseting into Hash Table of the current process
-        //  */
-        // hash_insert(&curr->spt_hash, &spte->hash_elem);
+        struct Supplemental_Page_Table_Entry *spte = setup_spte_from_file((void *)upage, file, ofs, writable, page_read_bytes); /* Adds kpage virtual address to hash table of the curernt process*/
 
         /*
         ! Delete this section
@@ -665,9 +647,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, 
         read_bytes -= page_read_bytes;
         zero_bytes -= page_zero_bytes;
         upage += PGSIZE;
-#ifdef vm
         ofs += PGSIZE;
-#endif
     }
     return true;
 }

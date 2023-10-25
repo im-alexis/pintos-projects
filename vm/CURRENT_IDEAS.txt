@@ -1,0 +1,6 @@
+SPTE ENTRY CREATION
+    Move towards three version of it (GENERAL, ELF, SWAP)
+        ELF -> FILE BASED PAGES 
+        GENREAL -> I THINK FOR STACK STUFF
+        SWAP -> FROM SWAP, IDK ABOUT IMPLEMENTATION YET
+    These come from a new entry in SPTE, the source enum.
