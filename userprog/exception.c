@@ -179,8 +179,9 @@ page_fault(struct intr_frame *f)
             goto BULL;
         }
 
-        if (!handle_mm_fault(&spte))
+        if (!handle_mm_fault(spte))
         {
+            log(L_ERROR, "WENT WRONG IN handle_mm_fault()\n", spte->kaddr, spte->uaddr);
             goto BULL;
         }
         log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in page_fault after handle_mm()\n", spte->kaddr, spte->uaddr);
@@ -199,7 +200,7 @@ BULL:
     }
 
     // return;
-    log(L_TRACE, "IT WENT PASSED EVERYTHING, PAIN\n");
+    log(L_ERROR, "CODE WENT PASSED EVERYTHING IN page_fault(), PAIN\n");
 
     f->eip = (void *)f->eax;
     f->eax = 0xffffffff;

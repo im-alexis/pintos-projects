@@ -55,7 +55,7 @@ struct Supplemental_Page_Table_Entry
     bool writable;
 };
 
-bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte);
+bool load_page(void *kaddr, struct Supplemental_Page_Table_Entry *spte);
 bool page_hash(const struct hash_elem *p_, void *aux);
 bool page_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux);
 struct Supplemental_Page_Table_Entry *setup_spte(void *kpage);

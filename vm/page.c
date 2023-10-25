@@ -43,16 +43,15 @@ static bool setup_stack(void **esp, int argc, char *argv[])
 /*
  After physical memory alloction, load the file page from the disk to physical memory
 */
-bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
+bool load_page(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
 {
     /*
-    ! Should be change it to load_page?
-    * Using file_read_at()
-    * Write physical memory as much as read_bytes by file_read_at
-    *  Return file_read_at status
-    *  Pad 0 as much as zero_bytes
-    *  if file is loaded to memory, return true
-    */
+     * Using file_read_at()
+     * Write physical memory as much as read_bytes by file_read_at
+     *  Return file_read_at status
+     *  Pad 0 as much as zero_bytes
+     *  if file is loaded to memory, return true
+     */
     switch (spte->location)
     {
     case DISK:
@@ -67,11 +66,19 @@ bool load_file(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
             {
                 size_t page_read_bytes = spte->read_bytes < PGSIZE ? spte->read_bytes : PGSIZE;
                 size_t page_zero_bytes = PGSIZE - page_read_bytes;
-                off_t bytes_read = file_read_at(file, kaddr, page_read_bytes, spte->ofs); /* maybe ideally */
-                // spte->current_file_pos = spte->ofs + page_read_bytes;
+                off_t num = file_read_at(file, (void *)kaddr, page_read_bytes, spte->ofs);
+                if ((int)num != (int)page_read_bytes)
+                {
+                    log(L_ERROR, "DID NOT READ %d BYTES FROM FILE, READ %d BYTES, PAIN \n", page_read_bytes, num);
+                    // palloc_free_page(kpage);
+                    return false;
+                }
+                // off_t bytes_read = file_read_at(file, kaddr, page_read_bytes, spte->ofs); /* maybe ideally */
+                //  spte->current_file_pos = spte->ofs + page_read_bytes;
                 memset(kaddr + page_read_bytes, 0, page_zero_bytes);
                 return true;
             }
+            log(L_ERROR, "ELF CASE, FILE WAS NULL \n");
             break;
         }
         case GENERAL:
@@ -183,22 +190,22 @@ bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte)
     void *kpage = palloc_get_page(PAL_USER); /* Switched it to void */
     if (kpage == NULL)
     {
-        log(L_TRACE, "Pain kpage is NULL \n");
+        log(L_ERROR, "Pain kpage is NULL \n");
 
         return false;
     }
     spte->kaddr = kpage;
 
     /* Would do the loading*/
-    if (!load_file(spte->kaddr, spte))
+    if (!load_page(spte->kaddr, spte))
     {
-        log(L_TRACE, "Pain in load_file() \n");
+        log(L_ERROR, "Pain in load_page() \n");
         return false;
     }
 
     if (!install_page(spte->uaddr, spte->kaddr, spte->writable))
     {
-        log(L_TRACE, "Pain in install_page()\n");
+        log(L_ERROR, "Pain in install_page()\n");
         return false;
     }
     spte->location = MEMORY;
@@ -206,7 +213,7 @@ bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte)
     /*
         When a page fault occurs, allocate physical memory
         Load file in the disk to physical moemory
-        Use load_file(void* kaddr, struct vm_entry *vme)
+        Use load_page(void* kaddr, struct vm_entry *vme)
         Update the associated poge table entry ater loading into physical memory
         Use static bool install_page(void *upage, void *kpage, bool writable)
     */
