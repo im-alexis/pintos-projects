@@ -9,7 +9,7 @@
 #include "filesys/filesys.h"
 #include "threads/vaddr.h"
 
-#include "filesys/experiment/file_plus.h"
+// #include "filesys/experiment/file_plus.h"
 
 #include "string.h"
 #define LOGGING_LEVEL 6
@@ -139,7 +139,7 @@ bool valid_ptr_v2(const void *addy)
     /* Check to see if the address is NULL, if it is valid for the user and that it is not below the start of virtual memory (0x08084000)  */
     if (!is_user_vaddr(addy) || addy == NULL || addy < (void *)0x08048000)
     {
-        matelo(thread_current());
+        matelo();
         return false;
     }
     return true;
@@ -173,7 +173,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
     if (!(valid_ptr(esp, 0, 4, 0)))
     {
-        matelo(cur);
+        matelo();
         return;
     }
 
@@ -245,7 +245,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         char *file = ((const char *)*arg0);
         if (file == NULL)
         {
-            matelo(cur);
+            matelo();
             return;
         }
         unsigned size = ((unsigned)*arg1);
@@ -262,11 +262,11 @@ syscall_handler(struct intr_frame *f UNUSED)
         char *file = ((const char *)*arg0);
         if (file == NULL)
         {
-            matelo(cur);
+            matelo();
             return;
         }
         /*
-        ! OLD
+        ^ OLD
         */
         lock_acquire(&file_lock);
         struct file *opened_file = filesys_open(file);
@@ -279,7 +279,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
 
         int result = search_by_file(opened_file);
-        if (result == -1)
+        if (result != -1)
         {
             lock_acquire(&file_lock);
             file_close(file);
@@ -294,7 +294,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             break;
         }
         /*
-        ! OLD
+        ^ OLD
         */
         /*
         & NEW VERSION
@@ -332,25 +332,23 @@ syscall_handler(struct intr_frame *f UNUSED)
 
         char *name = ((const char *)*arg0);
         /*
-        ! OLD
+        ^ OLD
         */
+        if (!valid_ptr_v2((const void *)arg0))
+            return;
+
+        char *file = ((const char *)*arg0);
         lock_acquire(&file_lock);
-        struct file *file = filesys_open(name);
-        lock_release(&file_lock);
-        lock_acquire(&file_lock);
+        /*
+        !This doesn't work
+        */
         bool ret = removed_from_table_by_file(file);
-        lock_release(&file_lock);
-        log(L_DEBUG, "File [%s] removed was [%d]", name, ret);
-        lock_acquire(&file_lock);
-        file_close(file);
         lock_release(&file_lock);
         if (ret)
         {
-            // log(L_DEBUG, "File [%s] removed was [%d]", file, ret);
             lock_acquire(&file_lock);
-            f->eax = filesys_remove(name);
+            f->eax = filesys_remove(file);
             lock_release(&file_lock);
-            return;
 
             // true;
         }
@@ -359,7 +357,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             f->eax = false;
         }
         /*
-        ! OLD
+        ^ OLD
         */
         /*
         & NEW VERSION
@@ -422,7 +420,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
         if (fd == STDOUT_FILENO || fd >= MAX_FD) // check fd table is valid, make sure buffer is a valid pointer, check the size is greater than 0
         {
-            matelo(cur);
+            matelo();
             return;
         }
         else if (fd == STDIN_FILENO)
@@ -438,7 +436,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
             if (fdt == NULL)
             {
-                matelo(cur);
+                matelo();
                 return;
             }
             lock_acquire(&file_lock);
@@ -467,7 +465,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         if (fd == STDIN_FILENO || fd >= MAX_FD || !result)
         {
             f->eax = 0;
-            matelo(cur);
+            matelo();
             return;
         }
         else if (fd == STDOUT_FILENO)
@@ -484,7 +482,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             // struct file *target = t->file;
             if (target == NULL)
             {
-                matelo(cur);
+                matelo();
                 return;
             }
             lock_acquire(&file_lock);
@@ -593,7 +591,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             }
             else
             {
-                matelo(cur);
+                matelo();
                 return;
             }
         }
@@ -607,7 +605,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         int fd = ((int)*arg0);
         if (fd == NULL || fd == STDOUT_FILENO || fd == STDIN_FILENO || fd >= MAX_FD)
         {
-            matelo(cur);
+            matelo();
             return;
         }
         else

@@ -493,7 +493,7 @@ init_thread(struct thread *t, const char *name, int priority)
     for (int i = 2; i < 20; i++)
     {
         t->file_descriptor_table[i] = NULL;
-        t->file_descriptor_table_plus[i] = NULL;
+        // t->file_descriptor_table_plus[i] = NULL;
     }
 
     t->fdt_index = 2;

@@ -8,7 +8,7 @@
 #include "filesys/file.h"
 #include "lib/kernel/hash.h"
 #include "vm/page.h"
-#include "filesys/experiment/file_plus.h"
+// #include "filesys/experiment/file_plus.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -123,9 +123,9 @@ struct thread
     int fdt_index;                              /* Is the index to the next file descriptor */
     int how_many_fd;                            /* Runnning count of how many files this process has open*/
 
-    struct file_plus *file_descriptor_table_plus[MAX_FD];
-    int fdt_index_plus;   /* Is the index to the next file descriptor */
-    int how_many_fd_plus; /* Runnning count of how many files this process has open*/
+    // struct file_plus *file_descriptor_table_plus[MAX_FD];
+    // int fdt_index_plus;   /* Is the index to the next file descriptor */
+    // int how_many_fd_plus; /* Runnning count of how many files this process has open*/
 
 #endif
 
