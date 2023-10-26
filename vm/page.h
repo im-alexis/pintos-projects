@@ -61,7 +61,7 @@ bool page_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux
 struct Supplemental_Page_Table_Entry *setup_spte(void *kpage);
 // struct Supplemental_Page_Table_Entry *setup_spte(uint8_t *kpage);
 bool install_page(void *upage, void *kpage, bool writable);
-bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte);
+bool handle_mm_fault(void *addr);
 struct Supplemental_Page_Table_Entry *find_spte(struct hash hash, void *addr);
 struct Supplemental_Page_Table_Entry *setup_spte_from_file(void *upage, struct file *file, off_t ofs, bool writable, uint32_t read_bytes);
 

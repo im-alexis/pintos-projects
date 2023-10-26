@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "filesys/directory.h"
+#include "filesys/filesys.h"
 #include "lib/kernel/hash.h"
 #include "vm/page.h"
 #include "threads/thread.h"
@@ -61,24 +62,26 @@ bool load_page(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
         {
         case ELF:
         {
-            struct file *file = spte->file;
-            if (file != NULL)
+            if (spte->file != NULL)
             {
+                struct file *file = spte->file;
                 size_t page_read_bytes = spte->read_bytes < PGSIZE ? spte->read_bytes : PGSIZE;
                 size_t page_zero_bytes = PGSIZE - page_read_bytes;
-                off_t num = file_read_at(file, (void *)kaddr, page_read_bytes, spte->ofs);
+                off_t num = file_read_at(spte->file, spte->kaddr, page_read_bytes, spte->ofs);
+                // file_seek(spte->file, spte->ofs);
+                //  off_t num = file_read(spte->file, kaddr, spte->read_bytes);
+
                 if ((int)num != (int)page_read_bytes)
                 {
-                    log(L_ERROR, "DID NOT READ %d BYTES FROM FILE, READ %d BYTES, PAIN \n", page_read_bytes, num);
+                    log(L_ERROR, "DID NOT READ %d BYTES FROM FILE, READ %d BYTES, PAIN", page_read_bytes, num);
                     // palloc_free_page(kpage);
                     return false;
                 }
-                // off_t bytes_read = file_read_at(file, kaddr, page_read_bytes, spte->ofs); /* maybe ideally */
-                //  spte->current_file_pos = spte->ofs + page_read_bytes;
+                log(L_DEBUG, "DID  READ %d BYTES FROM FILE, YAY", page_read_bytes, num);
                 memset(kaddr + page_read_bytes, 0, page_zero_bytes);
                 return true;
             }
-            log(L_ERROR, "ELF CASE, FILE WAS NULL \n");
+            log(L_ERROR, "ELF CASE, FILE WAS NULL");
             break;
         }
         case GENERAL:
@@ -131,7 +134,7 @@ struct Supplemental_Page_Table_Entry *setup_spte(void *kpage)
     spte->key = hash_key;
 
     spte->file = NULL;
-    log(L_TRACE, "Key goinging into HASH: [%04x] | UPAGE passed in setup_spte() [%04x]\n", spte->key, spte->uaddr);
+    log(L_INFO, "Key goinging into HASH: [%04x] | UPAGE passed in setup_spte() [%04x]", spte->key, spte->uaddr);
 
     hash_insert(&curr->spt_hash, &spte->hash_elem);
     return spte;
@@ -140,20 +143,30 @@ struct Supplemental_Page_Table_Entry *setup_spte_from_file(void *upage, struct f
 {
     struct thread *curr = thread_current();
 
-    struct Supplemental_Page_Table_Entry *spte = malloc(sizeof(struct Supplemental_Page_Table_Entry));
+    struct Supplemental_Page_Table_Entry *spte = (struct supplemental_page_table_entry *)malloc(sizeof(struct Supplemental_Page_Table_Entry));
     spte->kaddr = NULL;                          /* Kernel pages are 1-to-1 with frame? */
     spte->uaddr = upage;                         /* Passed in PAL_USER Flag into that */
     spte->location = DISK;                       /* Maybe, cuz it has not been loaded yet */
     spte->dirty = false;                         /* Still clean i guess */
     uint32_t hash_key = ((uint32_t)upage) >> 12; /* Making page # (20 bits) the key for hash*/
     spte->key = hash_key;
+    // spte->file = malloc(sizeof(struct file));
+    // spte->file->deny_write = file->deny_write;
+    // spte->file->inode = file->inode;
+    // spte->file->pos = file->pos;
+    // memcpy(spte->file->deny_write, file->deny_write, sizeof(bool));
+    // memcpy(spte->file->inode, file->inode, sizeof(struct inode));
+    // memcpy(spte->file->pos, file->pos, sizeof(off_t));
+    // spte->file = file_open(file->inode);
     spte->file = file;
+
+    spte->read_bytes = read_bytes;
+
+    log(L_DEBUG, "Key goinging into HASH: [%04x] | UPAGE passed in setup_spte_from_file() [%04x]", spte->key, spte->uaddr);
+
     spte->source = ELF;
     spte->ofs = ofs;
     spte->writable = writable;
-    spte->read_bytes = read_bytes;
-
-    log(L_TRACE, "Key goinging into HASH: [%04x] | UPAGE passed in setup_spte_from_file() [%04x]\n", spte->key, spte->uaddr);
     hash_insert(&curr->spt_hash, &spte->hash_elem);
     return spte;
 }
@@ -180,32 +193,39 @@ bool install_page(void *upage, void *kpage, bool writable)
  Desciption
 */
 
-bool handle_mm_fault(struct Supplemental_Page_Table_Entry *spte)
+bool handle_mm_fault(void *addr)
 {
 
     /* Get a page of memory. */
 
-    log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in handle_mm_fault\n", spte->kaddr, spte->uaddr);
-
+    struct thread *cur = thread_current();
+    struct Supplemental_Page_Table_Entry *spte = find_spte(cur->spt_hash, addr);
+    if (spte == NULL)
+    {
+        log(L_INFO, "ADDR: [%08x] is not part of this thread", addr);
+        return false;
+    }
+    // log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in handle_mm_fault\n", spte->kaddr, spte->uaddr);
     void *kpage = palloc_get_page(PAL_USER); /* Switched it to void */
     if (kpage == NULL)
     {
-        log(L_ERROR, "Pain kpage is NULL \n");
+        log(L_ERROR, "Pain kpage is NULL");
 
         return false;
     }
     spte->kaddr = kpage;
+    // log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in handle_mm_fault\n", spte->kaddr, spte->uaddr);
 
     /* Would do the loading*/
     if (!load_page(spte->kaddr, spte))
     {
-        log(L_ERROR, "Pain in load_page() \n");
+        log(L_ERROR, "Pain in load_page()");
         return false;
     }
 
     if (!install_page(spte->uaddr, spte->kaddr, spte->writable))
     {
-        log(L_ERROR, "Pain in install_page()\n");
+        log(L_ERROR, "Pain in install_page()");
         return false;
     }
     spte->location = MEMORY;
@@ -229,14 +249,13 @@ struct Supplemental_Page_Table_Entry *find_spte(struct hash hash, void *addr)
 
     struct hash_elem *e;
     scratch.key = ((uint32_t)addr) >> 12;
-    log(L_TRACE, "Key in Exeception.c:[%04x]\n", scratch.key);
+    // og(L_TRACE, "Key in Exeception.c:[%04x]\n", scratch.key);
     e = hash_find(&hash, &scratch.hash_elem);
-    log(L_TRACE, "e:[%d]\n", e);
+    // log(L_TRACE, "e:[%d]\n", e);
     if (e != NULL)
     {
         result = hash_entry(e, struct Supplemental_Page_Table_Entry, hash_elem);
-        log(L_TRACE, "Key:[%08x] and Vaddr:[%08x]\n", result->key, result->uaddr);
-        log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in find_spte before handle_mm()\n", result->kaddr, result->uaddr);
+        log(L_DEBUG, "KPAGE: [%08x] | UPAGE: [%08x] | Key:[%08x] in find_spte before handle_mm()", result->kaddr, result->uaddr, result->key);
     }
     return result;
 }

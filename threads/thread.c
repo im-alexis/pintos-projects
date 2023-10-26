@@ -493,6 +493,7 @@ init_thread(struct thread *t, const char *name, int priority)
     for (int i = 2; i < 20; i++)
     {
         t->file_descriptor_table[i] = NULL;
+        t->file_descriptor_table_plus[i] = NULL;
     }
 
     t->fdt_index = 2;
@@ -668,9 +669,10 @@ struct thread *find_thread_by_tid(tid_t ftid)
 /* Offset of `stack' member within `struct thread'.
  * Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof(struct thread, stack);
-int find_next_table_pos(struct thread *cur);
-int find_next_table_pos(struct thread *cur)
+int find_next_table_pos();
+int find_next_table_pos()
 {
+    struct thread *cur = thread_current();
     for (int i = 2; i < MAX_FD; i++)
     {
         if (cur->file_descriptor_table[i] == NULL)
@@ -682,12 +684,13 @@ int find_next_table_pos(struct thread *cur)
     return -1;
 }
 
-int add_to_table(struct thread *cur, struct file *new_file)
+int add_to_table(struct file *new_file)
 {
+    struct thread *cur = thread_current();
     // add like a loop around
     if ((cur->fdt_index == MAX_FD - 1) && (cur->how_many_fd != MAX_FD))
     {
-        find_next_table_pos(cur);
+        find_next_table_pos();
     }
     else if (new_file != NULL && (cur->how_many_fd < MAX_FD))
     {
@@ -700,17 +703,19 @@ int add_to_table(struct thread *cur, struct file *new_file)
     }
     return -1;
 }
-void removed_from_table(int fd, struct thread *cur)
+void removed_from_table(int fd)
 {
+    struct thread *cur = thread_current();
     cur->file_descriptor_table[fd] = NULL;
     cur->how_many_fd--;
 }
-bool removed_from_table_by_filename(struct thread *cur, struct file *file)
+bool removed_from_table_by_file(struct file *file)
 {
+    struct thread *cur = thread_current();
     for (int i = 2; i < MAX_FD; i++)
     {
         struct file *looped_file = cur->file_descriptor_table[i];
-        if (looped_file == file)
+        if (looped_file->inode == file->inode)
         {
             /*
             Properly rmeove from table
@@ -724,8 +729,9 @@ bool removed_from_table_by_filename(struct thread *cur, struct file *file)
 
     return false;
 }
-int search_by_file(struct thread *cur, struct file *target_file)
+int search_by_file(struct file *target_file)
 {
+    struct thread *cur = thread_current();
     for (int i = 2; i < MAX_FD; i++)
     {
         if (cur->file_descriptor_table[i] == target_file)

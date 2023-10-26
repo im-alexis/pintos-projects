@@ -9,7 +9,12 @@
 #include "filesys/filesys.h"
 #include "threads/vaddr.h"
 
+#include "filesys/experiment/file_plus.h"
+
 #include "string.h"
+#define LOGGING_LEVEL 6
+
+#include <log.h>
 
 static void syscall_handler(struct intr_frame *);
 static int get_user(const uint8_t *uaddr);
@@ -77,8 +82,10 @@ void close_thread_files() /* -> it no worky :(  */
 Terminates a thread with exit code -1
 matelo (kill it)
 */
-void matelo(struct thread *cur)
+void matelo()
 {
+    log(L_TRACE, "matelo()");
+    struct thread *cur = thread_current();
     close_thread_files();
     cur->exit_code = -1;
     thread_exit();
@@ -97,7 +104,7 @@ args:
 
 bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call)
 {
-    printf("Address being validated in valid_ptr():[%08x]\n", addy);
+    // log(L_TRACE, "Address being validated in valid_ptr():[%08x]\n", addy);
     if (type_of_call == 1)
     {
         if (addy == NULL)
@@ -128,7 +135,7 @@ bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call)
 
 bool valid_ptr_v2(const void *addy)
 {
-    printf("Address being validated in valid_ptr_v2():[%08x]\n", addy);
+    // log(L_TRACE, "Address being validated in valid_ptr_v2():[%08x]\n", addy);
     /* Check to see if the address is NULL, if it is valid for the user and that it is not below the start of virtual memory (0x08084000)  */
     if (!is_user_vaddr(addy) || addy == NULL || addy < (void *)0x08048000)
     {
@@ -155,6 +162,7 @@ bool check_buffer(void *buffer, unsigned size)
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
+    log(L_TRACE, "syscall_handler()");
     lock_init(&file_lock);                 /* lock for any file related activity*/
     struct thread *cur = thread_current(); /*current thread calling a system call*/
     uint32_t *esp = f->esp;
@@ -180,6 +188,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         matelo(cur);
         return;
     }
+    log(L_INFO, "Syscall number [%d]", syscall_num);
 
     switch (syscall_num)
     {
@@ -256,16 +265,21 @@ syscall_handler(struct intr_frame *f UNUSED)
             matelo(cur);
             return;
         }
+        /*
+        ! OLD
+        */
         lock_acquire(&file_lock);
         struct file *opened_file = filesys_open(file);
         lock_release(&file_lock);
+
         if (opened_file == NULL)
         {
             f->eax = -1;
             return;
         }
-        int result = search_by_file(cur, opened_file);
-        if (result != -1)
+
+        int result = search_by_file(opened_file);
+        if (result == -1)
         {
             lock_acquire(&file_lock);
             file_close(file);
@@ -276,9 +290,38 @@ syscall_handler(struct intr_frame *f UNUSED)
         else
         {
             // file_allow_write(opened_file);
-            f->eax = add_to_table(cur, opened_file);
+            f->eax = add_to_table(opened_file);
             break;
         }
+        /*
+        ! OLD
+        */
+        /*
+        & NEW VERSION
+         */
+
+        // if (search_by_file_plus(file) == -1)
+        // {
+        //     f->eax = -1;
+        //     return;
+        // }
+        // struct file_plus *pfile = create_file_plus(opened_file, file);
+        // if (pfile == NULL)
+        // {
+        //     log(L_ERROR, "Could not create a pfile");
+        //     destroy_plus_file(pfile, true);
+        //     f->eax = -1;
+        //     return;
+        // }
+        // else
+        // {
+        //     f->eax = add_to_table_plus(pfile);
+        //     break;
+        // }
+
+        /*
+        & NEW VERSION
+        */
     }
 
     case SYS_REMOVE:
@@ -287,15 +330,27 @@ syscall_handler(struct intr_frame *f UNUSED)
         if (!valid_ptr_v2((const void *)arg0))
             return;
 
-        char *file = ((const char *)*arg0);
+        char *name = ((const char *)*arg0);
+        /*
+        ! OLD
+        */
         lock_acquire(&file_lock);
-        bool ret = removed_from_table_by_filename(file, cur);
+        struct file *file = filesys_open(name);
+        lock_release(&file_lock);
+        lock_acquire(&file_lock);
+        bool ret = removed_from_table_by_file(file);
+        lock_release(&file_lock);
+        log(L_DEBUG, "File [%s] removed was [%d]", name, ret);
+        lock_acquire(&file_lock);
+        file_close(file);
         lock_release(&file_lock);
         if (ret)
         {
+            // log(L_DEBUG, "File [%s] removed was [%d]", file, ret);
             lock_acquire(&file_lock);
-            f->eax = filesys_remove(file);
+            f->eax = filesys_remove(name);
             lock_release(&file_lock);
+            return;
 
             // true;
         }
@@ -303,6 +358,26 @@ syscall_handler(struct intr_frame *f UNUSED)
         {
             f->eax = false;
         }
+        /*
+        ! OLD
+        */
+        /*
+        & NEW VERSION
+        */
+
+        // int fd = search_by_filename_plus(name);
+        // if (fd != -1)
+        // {
+        //     removed_from_table_by_filename_plus(fd);
+        // }
+        // lock_acquire(&file_lock);
+        // f->eax = filesys_remove(name);
+        // lock_release(&file_lock);
+
+        /*
+       & NEW VERSION
+       */
+
         break;
     }
         // idk what we are doing, we are drunk, sober alexis, look here plz
@@ -316,6 +391,8 @@ syscall_handler(struct intr_frame *f UNUSED)
         if ((fd != STDIN_FILENO) && (fd != STDOUT_FILENO))
         {
             struct file *target = cur->file_descriptor_table[fd];
+            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            // struct file *target = t->file;
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
@@ -356,6 +433,8 @@ syscall_handler(struct intr_frame *f UNUSED)
         else
         {
             struct file *fdt = cur->file_descriptor_table[fd];
+            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            // struct file *fdt = t->file;
 
             if (fdt == NULL)
             {
@@ -400,8 +479,10 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            struct file *targeta = cur->file_descriptor_table[fd];
-            if (targeta == NULL)
+            struct file *target = cur->file_descriptor_table[fd];
+            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            // struct file *target = t->file;
+            if (target == NULL)
             {
                 matelo(cur);
                 return;
@@ -409,9 +490,10 @@ syscall_handler(struct intr_frame *f UNUSED)
             lock_acquire(&file_lock);
             struct file *exec_file = filesys_open(cur->executing_file);
             lock_release(&file_lock);
-            if (exec_file->inode == targeta->inode)
+            if (exec_file->inode == target->inode)
             {
                 lock_acquire(&file_lock);
+                // file_deny_write(&exec_file);
                 file_close(exec_file);
                 lock_release(&file_lock);
                 cur->exit_code;
@@ -422,12 +504,20 @@ syscall_handler(struct intr_frame *f UNUSED)
             file_close(exec_file);
             lock_release(&file_lock);
 
-            lock_acquire(&file_lock);
-            // file_allow_write(targeta);
-            if (!targeta->deny_write)
-                f->eax = file_write(targeta, buffer, size);
+            // log(L_DEBUG, "Targeta {inode: [%08x], file_deny_write: [%d]}", target->inode, target->deny_write);
+            // if (target->deny_write == true)
+            // {
+            //     log(L_DEBUG, "Tried to write to exec file. cur->exec_f->inode [%08x] target->inode [%08x] | cur->parent->exec_f->inode [%08x]  \n", cur->exec_f->inode, target->inode, cur->parent->exec_f->inode);
+            //     f->eax = 0;
+            //     return;
+            // }
 
-            // file_deny_write(targeta);
+            lock_acquire(&file_lock);
+            // file_allow_write(target);
+            if (!target->deny_write)
+                f->eax = file_write(target, buffer, size);
+
+            // file_deny_write(target);
             lock_release(&file_lock);
         }
 
@@ -457,6 +547,9 @@ syscall_handler(struct intr_frame *f UNUSED)
         else
         {
             struct file *target = cur->file_descriptor_table[fd];
+            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            // struct file *target = t->file;
+
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
@@ -490,6 +583,8 @@ syscall_handler(struct intr_frame *f UNUSED)
         else
         {
             struct file *target = cur->file_descriptor_table[fd];
+            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            // struct file *target = t->file;
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
@@ -518,12 +613,15 @@ syscall_handler(struct intr_frame *f UNUSED)
         else
         {
             struct file *target = cur->file_descriptor_table[fd];
+            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            // struct file *target = t->file;
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
                 file_close(target);
                 lock_release(&file_lock);
-                removed_from_table(fd, cur);
+                removed_from_table(fd);
+                // removed_from_table_plus(fd);
             }
         }
 

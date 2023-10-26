@@ -407,15 +407,10 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     /* Open executable file. */
     lock_acquire(&file_lock);
     file = filesys_open(args[0]);
-    if (file != NULL)
-    {
-        file_deny_write(file);
-    }
+
     lock_release(&file_lock);
     if (file == NULL)
     {
-        // t->exit_code = 0;
-        // t->tid = -1;
         printf("load: %s: open failed\n", args[0]);
         goto done;
     }
@@ -506,7 +501,9 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
 done:
     /* We arrive here whether the load is successful or not. */
-    file_close(file);
+    if (success)
+        file_deny_write(file);
+
     return success;
 }
 
@@ -597,7 +594,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, 
     ASSERT(ofs % PGSIZE == 0);
 
     log(L_TRACE, "load_segment()");
-    printf("upage in load_seg: [%04x]\n", upage);
+    log(L_INFO, "upage in load_seg: [%08x]", upage);
     file_seek(file, ofs);
     while (read_bytes > 0 || zero_bytes > 0)
     {
@@ -609,6 +606,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, 
         // #ifdef vm
         //  this is javie thots
         struct thread *curr = thread_current();
+        // curr->exec_f = file;
         ASSERT(pagedir_get_page(curr->pagedir, upage) == NULL); // No virtual page
 
         // struct Supplemental_Page_Table_Entry *spte = setup_spte((void *)upage); /* Adds kpage virtual address to hash table of the curernt process*/

@@ -8,6 +8,7 @@
 #include "filesys/file.h"
 #include "lib/kernel/hash.h"
 #include "vm/page.h"
+#include "filesys/experiment/file_plus.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -109,16 +110,22 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
 
-    uint32_t *pagedir;                          /* Page directory. */
-    struct semaphore exiting_thread;            /* For when the thread is exiting*/
-    struct semaphore reading_exit_status;       /* To make sure the parent can read the exit status of the child*/
-    int exit_code;                              /* Holds the exit status for the thread*/
+    uint32_t *pagedir;                    /* Page directory. */
+    struct semaphore exiting_thread;      /* For when the thread is exiting*/
+    struct semaphore reading_exit_status; /* To make sure the parent can read the exit status of the child*/
+    int exit_code;                        /* Holds the exit status for the thread*/
+
+    struct list mis_ninos; /* List of child process belonging to this process */
+    struct list_elem chld_thrd_elm;
+    bool has_been_waited_on; /* Simple flag to check if a child was waited on or not*/
+
     struct file *file_descriptor_table[MAX_FD]; /* Holds File Descriptors per process*/
     int fdt_index;                              /* Is the index to the next file descriptor */
     int how_many_fd;                            /* Runnning count of how many files this process has open*/
-    struct list mis_ninos;                      /* List of child process belonging to this process */
-    struct list_elem chld_thrd_elm;
-    bool has_been_waited_on; /* Simple flag to check if a child was waited on or not*/
+
+    struct file_plus *file_descriptor_table_plus[MAX_FD];
+    int fdt_index_plus;   /* Is the index to the next file descriptor */
+    int how_many_fd_plus; /* Runnning count of how many files this process has open*/
 
 #endif
 
@@ -164,9 +171,9 @@ int thread_get_load_avg(void);
 bool is_thread(struct thread *t);
 struct thread *find_thread_by_tid(tid_t tid);
 
-int add_to_table(struct thread *cur, struct file *new_file);
-void removed_from_table(int fd, struct thread *cur);
-bool removed_from_table_by_filename(struct thread *cur, struct file *file);
-int search_by_file(struct thread *cur, struct file *target_file);
+int add_to_table(struct file *new_file);
+void removed_from_table(int fd);
+bool removed_from_table_by_file(struct file *file);
+int search_by_file(struct file *target_file);
 
 #endif /* threads/thread.h */

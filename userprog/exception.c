@@ -128,7 +128,7 @@ static void
 page_fault(struct intr_frame *f)
 {
     // ! Will calll handle_mm_fault(struct vm_entry *spte)
-
+    log(L_TRACE, "page_fault()");
     bool not_present; /* True: not-present page, false: writing r/o page. */
     bool write;       /* True: access was write, false: access was read. */
     bool user;        /* True: access by user, false: access by kernel. */
@@ -159,60 +159,58 @@ page_fault(struct intr_frame *f)
     not_present = (f->error_code & PF_P) == 0;
     write = (f->error_code & PF_W) != 0;
     user = (f->error_code & PF_U) != 0;
+
+    log(L_INFO, "not_present:[%d] | write:[%d] | user:[%d]", not_present, write, user);
+    log(L_INFO, "Thread_Name: %s", cur->name);
+    log(L_DEBUG, "Fault_Address in Exeception.c:[%8x]", fault_addr);
+
+    /*
+     * Check for validity
+     */
     if (!not_present)
     {
         // attempt to write to a read-only region is always killed.
         goto BULL;
     }
     /*
-     * Check for validity
-     */
-    log(L_TRACE, "not_present:[%d] | write:[%d] | user:[%d]\n", not_present, write, user);
-    log(L_TRACE, "Thread_Name: %s\n", cur->name);
-    log(L_TRACE, "Fault_Address in Exeception.c:[%8x]\n", fault_addr);
+    ! did not need to be looped at all
+    */
+    // if (not_present && user) /* IDK ABOUT USER PARAM */
+    // {
+    //     spte = find_spte(cur->spt_hash, fault_addr);
+    //     if (spte == NULL)
+    //     {
+    //         goto BULL;
+    //     }
 
-    if (not_present && user) /* IDK ABOUT USER PARAM */
+    //     return;
+    // }
+    if (!handle_mm_fault((void *)fault_addr))
     {
-        spte = find_spte(cur->spt_hash, fault_addr);
-        if (spte == NULL)
-        {
-            goto BULL;
-        }
-
-        if (!handle_mm_fault(spte))
-        {
-            log(L_ERROR, "WENT WRONG IN handle_mm_fault()\n", spte->kaddr, spte->uaddr);
-            goto BULL;
-        }
-        log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in page_fault after handle_mm()\n", spte->kaddr, spte->uaddr);
-
-        return;
+        log(L_ERROR, "WENT WRONG IN handle_mm_fault()", spte->kaddr, spte->uaddr);
+        goto BULL;
     }
+    // log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in page_fault after handle_mm()\n", spte->kaddr, spte->uaddr);
     return;
 
 BULL:
-
+    /*
+     * If there is an overall error then make sure you don't thread_exit the kernel
+     */
     if (!user) // kernel
     {
         f->eip = (void *)f->eax;
         f->eax = 0xffffffff;
+        thread_exit(); /* NEEDS THIS TO BE HERE TO RUN, BUT ION KNOW*/
         return;
     }
 
-    // return;
+    /*
+     * Otherwise kill it
+     */
+
     log(L_ERROR, "CODE WENT PASSED EVERYTHING IN page_fault(), PAIN\n");
-
-    f->eip = (void *)f->eax;
-    f->eax = 0xffffffff;
+    // f->eip = (void *)f->eax;
+    // f->eax = 0xffffffff;
     thread_exit();
-
-    // /* To implement virtual memory, delete the rest of the function
-    //  * body, and replace it with code that brings in the page to
-    //  * which fault_addr refers. */
-    // printf("Page fault at %p: %s error %s page in %s context.\n",
-    //        fault_addr,
-    //        not_present ? "not present" : "rights violation",
-    //        write ? "writing" : "reading",
-    //        user ? "user" : "kernel");
-    // kill(f);
 }
