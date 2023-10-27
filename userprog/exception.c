@@ -21,21 +21,23 @@ static long long page_fault_cnt;
 static void kill(struct intr_frame *);
 static void page_fault(struct intr_frame *);
 
-/* Registers handlers for interrupts that can be caused by user
- * programs.
- *
- * In a real Unix-like OS, most of these interrupts would be
- * passed along to the user process in the form of signals, as
- * described in [SV-386] 3-24 and 3-25, but we don't implement
- * signals.  Instead, we'll make them simply kill the user
- * process.
- *
- * Page faults are an exception.  Here they are treated the same
- * way as other exceptions, but this will need to change to
- * implement virtual memory.
- *
- * Refer to [IA32-v3a] section 5.15 "Exception and Interrupt
- * Reference" for a description of each of these exceptions. */
+/*
+ & Registers handlers for interrupts that can be caused by user
+ & programs.
+ &
+ & In a real Unix-like OS, most of these interrupts would be
+ & passed along to the user process in the form of signals, as
+ & described in [SV-386] 3-24 and 3-25, but we don't implement
+ & signals.  Instead, we'll make them simply kill the user
+ & process.
+ &
+ & Page faults are an exception.  Here they are treated the same
+ & way as other exceptions, but this will need to change to
+ & implement virtual memory.
+ &
+ & Refer to [IA32-v3a] section 5.15 "Exception and Interrupt
+ & Reference" for a description of each of these exceptions.
+  */
 void exception_init(void)
 {
     /* These exceptions can be raised explicitly by a user program,
@@ -72,7 +74,9 @@ void exception_print_stats(void)
     printf("Exception: %lld page faults\n", page_fault_cnt);
 }
 
-/* Handler for an exception (probably) caused by a user process. */
+/*
+ & Handler for an exception (probably) caused by a user process.
+*/
 static void
 kill(struct intr_frame *f)
 {
@@ -113,17 +117,19 @@ kill(struct intr_frame *f)
     }
 }
 
-/* Page fault handler.  This is a skeleton that must be filled in
- * to implement virtual memory.  Some solutions to project 2 may
- * also require modifying this code.
- *
- * At entry, the address that faulted is in CR2 (Control Register
- * 2) and information about the fault, formatted as described in
- * the PF_* macros in exception.h, is in F's error_code member.  The
- * example code here shows how to parse that information.  You
- * can find more information about both of these in the
- * description of "Interrupt 14--Page Fault Exception (#PF)" in
- * [IA32-v3a] section 5.15 "Exception and Interrupt Reference". */
+/*
+ & Page fault handler.  This is a skeleton that must be filled in
+ & to implement virtual memory.  Some solutions to project 2 may
+ & also require modifying this code.
+ &
+ & At entry, the address that faulted is in CR2 (Control Register
+ & 2) and information about the fault, formatted as described in
+ & the PF_* macros in exception.h, is in F's error_code member.  The
+ & example code here shows how to parse that information.  You
+ & can find more information about both of these in the
+ & description of "Interrupt 14--Page Fault Exception (#PF)" in
+ & [IA32-v3a] section 5.15 "Exception and Interrupt Reference".
+ */
 static void
 page_fault(struct intr_frame *f)
 {
@@ -172,19 +178,7 @@ page_fault(struct intr_frame *f)
         // attempt to write to a read-only region is always killed.
         goto BULL;
     }
-    /*
-    ! did not need to be looped at all
-    */
-    // if (not_present && user) /* IDK ABOUT USER PARAM */
-    // {
-    //     spte = find_spte(cur->spt_hash, fault_addr);
-    //     if (spte == NULL)
-    //     {
-    //         goto BULL;
-    //     }
 
-    //     return;
-    // }
     if (!handle_mm_fault((void *)fault_addr))
     {
         log(L_ERROR, "WENT WRONG IN handle_mm_fault()", spte->kaddr, spte->uaddr);
@@ -199,9 +193,10 @@ BULL:
      */
     if (!user) // kernel
     {
+        log(L_TRACE, "in page_fault(), BULL section, in the if statement");
         f->eip = (void *)f->eax;
         f->eax = 0xffffffff;
-        thread_exit(); /* NEEDS THIS TO BE HERE TO RUN, BUT ION KNOW*/
+        thread_exit(); // ^ ROIE SAID IT's okay to kill it right here
         return;
     }
 
@@ -209,8 +204,8 @@ BULL:
      * Otherwise kill it
      */
 
-    log(L_ERROR, "CODE WENT PASSED EVERYTHING IN page_fault(), PAIN\n");
-    // f->eip = (void *)f->eax;
-    // f->eax = 0xffffffff;
+    log(L_ERROR, "CODE WENT PASSED EVERYTHING IN page_fault(), PAIN");
+    f->eip = (void *)f->eax;
+    f->eax = 0xffffffff;
     thread_exit();
 }

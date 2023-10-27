@@ -25,26 +25,27 @@ enum page_location
 };
 enum source
 {
-    ELF,      /* File Backed */
-    GENERAL,  /* STACK or Variables?? */
-    ANONYMOUS /* IN the swap SPACE */
-    // the status in page.c will tell the frame (in a switch case) what direction to go: SWAP, MEMORY, DISK
+    ELF,     /* File Backed */
+    GENERAL, /* STACK or Variables?? */
+    // ? Not sure if Anonymous is needed
+    // ANONYMOUS /* IN the swap SPACE */
+
 };
 
 struct Supplemental_Page_Table_Entry
 {
     struct hash_elem hash_elem;
     uint32_t key; /* Key */
-    /*
-    *Location of each page: whether it’s in SWAP, MEMORY, or DISK  // does this mmean enum page_location? aka done?
-    ! Uaddr and Kaddr (Done?? line 17 & 18)
-    *Etc. (Don't know what this means)
-    */
+
     void *uaddr;                 /* User Address - Virtual Page */
     void *kaddr;                 /* Kernel Address - Frame ?? */
     enum page_location location; /* Where it currently is */
-    enum source source;
-    bool dirty; /* Was it written to */
+    enum source source;          /* Where it came from */
+    bool dirty;                  /* Was it written to */
+
+    struct lock lock; // Might need
+
+    // TODO: Could add it Frame_Table_Entry once implemented
 
     /*
     & APEMAN MONEUVERS
@@ -58,11 +59,12 @@ struct Supplemental_Page_Table_Entry
 bool load_page(void *kaddr, struct Supplemental_Page_Table_Entry *spte);
 bool page_hash(const struct hash_elem *p_, void *aux);
 bool page_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux);
-struct Supplemental_Page_Table_Entry *setup_spte(void *kpage);
-// struct Supplemental_Page_Table_Entry *setup_spte(uint8_t *kpage);
+static bool setup_stack_page(void **esp, int argc, char *argv[]);
+struct Supplemental_Page_Table_Entry *setup_spte_general(void *addr);
 bool install_page(void *upage, void *kpage, bool writable);
 bool handle_mm_fault(void *addr);
 struct Supplemental_Page_Table_Entry *find_spte(struct hash hash, void *addr);
+struct Supplemental_Page_Table_Entry *setup_spte_general(void *addr);
 struct Supplemental_Page_Table_Entry *setup_spte_from_file(void *upage, struct file *file, off_t ofs, bool writable, uint32_t read_bytes);
 
 #endif

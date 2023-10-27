@@ -1,0 +1,194 @@
+[34mTest:[0m tests/userprog/args-none
+removed 'tests/userprog/args-none.output'
+removed 'tests/userprog/args-none.result'
+
+[34mCommands:[0m pintos -v -k -T 10 --qemu  --filesys-size=2 -p tests/userprog/args-none -a args-none --swap-size=4 -- -q  -f run args-none < /dev/null 2> tests/userprog/args-none.errors > tests/userprog/args-none.output
+perl -I../.. ../../tests/userprog/args-none.ck tests/userprog/args-none tests/userprog/args-none.result
+[34mPintos:[0m pintos   -v -k -T 10 --qemu --filesys-size=2 -p tests/userprog/args-none -a args-none --swap-size=4 -- -q -f run args-none  < /dev/null | tee  tests/userprog/args-none.output
+Copying tests/userprog/args-none to scratch partition...
+qemu -device isa-debug-exit -drive file=/tmp/hz_4vomTIu.dsk,format=raw,index=0,media=disk -m 4 -net none -nographic -monitor null
+[0mSeaBIOS (version 1.13.0-1ubuntu1.1)
+Booting from Hard Disk...
+PPiiLLoo  hhddaa1
+1
+LLooaaddiinngg.............................
+Kernel command line: -q -f extract run args-none
+Pintos booting with 3,968 kB RAM...
+367 pages available in kernel pool.
+367 pages available in user pool.
+[00;34mTRACE | ../../threads/thread.c:120:thread_start()           | thread_start[0m
+Calibrating timer...  78,540,800 loops/s.
+hda: 13,104 sectors (6 MB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 244 sectors (122 kB), Pintos OS kernel (20)
+hda2: 4,096 sectors (2 MB), Pintos file system (21)
+hda3: 83 sectors (41 kB), Pintos scratch (22)
+hda4: 8,192 sectors (4 MB), Pintos swap (23)
+filesys: using hda2
+scratch: using hda3
+swap: using hda4
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'args-none' into the file system...
+Erasing ustar archive...
+Executing 'args-none':
+[00;34mTRACE | ../../userprog/process.c:47:process_execute()       | Started process execute: args-none[0m
+[00;34mTRACE | ../../userprog/process.c:117:start_process()        | start_process()[0m
+[00;34mTRACE | ../../userprog/process.c:377:load()                 | load()[0m
+[00;34mTRACE | ../../userprog/process.c:596:load_segment()         | load_segment()[0m
+[00;36mINFO  | ../../userprog/process.c:597:load_segment()         | upage in load_seg: [08048000][0m
+[00;35mDEBUG | ../../vm/page.c:246:setup_spte_from_file()          | Key goinging into HASH: [8048] | UPAGE passed in setup_spte_from_file() [8048000][0m
+[00;35mDEBUG | ../../vm/page.c:246:setup_spte_from_file()          | Key goinging into HASH: [8049] | UPAGE passed in setup_spte_from_file() [8049000][0m
+[00;35mDEBUG | ../../vm/page.c:246:setup_spte_from_file()          | Key goinging into HASH: [804a] | UPAGE passed in setup_spte_from_file() [804a000][0m
+[00;35mDEBUG | ../../vm/page.c:246:setup_spte_from_file()          | Key goinging into HASH: [804b] | UPAGE passed in setup_spte_from_file() [804b000][0m
+[00;34mTRACE | ../../userprog/process.c:596:load_segment()         | load_segment()[0m
+[00;36mINFO  | ../../userprog/process.c:597:load_segment()         | upage in load_seg: [0804c000][0m
+[00;35mDEBUG | ../../vm/page.c:246:setup_spte_from_file()          | Key goinging into HASH: [804c] | UPAGE passed in setup_spte_from_file() [804c000][0m
+[00;34mTRACE | ../../userprog/process.c:662:setup_stack()          | setup_stack()[0m
+[00;36mINFO  | ../../vm/page.c:217:setup_spte_general()            | Key goinging into HASH: [0000] | UPAGE passed in setup_spte_general() [0000][0m
+[00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
+[00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[0] | user:[1][0m
+[00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
+[00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[ 8048852][0m
+[00;35mDEBUG | ../../vm/page.c:339:find_spte()                     | KPAGE: [00000000] | UPAGE: [08048000] | Key:[00008048] in find_spte before handle_mm()[0m
+[00;35mDEBUG | ../../vm/page.c:143:load_page()                     | DID  READ 4096 BYTES FROM FILE, YAY[0m
+[00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
+[00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[0] | user:[1][0m
+[00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
+[00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[ 804b050][0m
+[00;35mDEBUG | ../../vm/page.c:339:find_spte()                     | KPAGE: [00000000] | UPAGE: [0804b000] | Key:[0000804b] in find_spte before handle_mm()[0m
+[00;35mDEBUG | ../../vm/page.c:143:load_page()                     | DID  READ 1954 BYTES FROM FILE, YAY[0m
+[00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
+[00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[1] | user:[1][0m
+[00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
+[00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[ 804cd44][0m
+[00;35mDEBUG | ../../vm/page.c:339:find_spte()                     | KPAGE: [00000000] | UPAGE: [0804c000] | Key:[0000804c] in find_spte before handle_mm()[0m
+[00;35mDEBUG | ../../vm/page.c:143:load_page()                     | DID  READ 2056 BYTES FROM FILE, YAY[0m
+[00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
+[00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[0] | user:[1][0m
+[00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
+[00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[ 80490af][0m
+[00;35mDEBUG | ../../vm/page.c:339:find_spte()                     | KPAGE: [00000000] | UPAGE: [08049000] | Key:[00008049] in find_spte before handle_mm()[0m
+[00;35mDEBUG | ../../vm/page.c:143:load_page()                     | DID  READ 4096 BYTES FROM FILE, YAY[0m
+[00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
+[00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[0] | user:[1][0m
+[00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
+[00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[ 804a2e6][0m
+[00;35mDEBUG | ../../vm/page.c:339:find_spte()                     | KPAGE: [00000000] | UPAGE: [0804a000] | Key:[0000804a] in find_spte before handle_mm()[0m
+[00;35mDEBUG | ../../vm/page.c:143:load_page()                     | DID  READ 4096 BYTES FROM FILE, YAY[0m
+[00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
+[00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [9][0m
+(args) begin
+[00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
+[00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [9][0m
+(args) argc = 1
+[00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
+[00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [9][0m
+(args) argv[0] = 'args-none'
+[00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
+[00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [9][0m
+(args) argv[1] = null
+[00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
+[00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [9][0m
+(args) end
+[00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
+[00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [1][0m
+[00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
+[00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[0] | user:[0][0m
+[00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
+[00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[8401f08b][0m
+[00;36mINFO  | ../../vm/page.c:286:handle_mm_fault()               | ADDR: [8401f08b] is not part of this thread[0m
+[00;31mERROR | ../../userprog/exception.c:184:page_fault()         | WENT WRONG IN handle_mm_fault()[0m
+[00;34mTRACE | ../../userprog/exception.c:196:page_fault()         | in page_fault(), BULL section, in the if statement[0m
+args-none: exit(0)
+Execution of 'args-none' complete.
+Timer: 157 ticks
+Thread: 0 idle ticks, 70 kernel ticks, 87 user ticks
+hda2 (filesys): 65 reads, 170 writes
+hda3 (scratch): 82 reads, 2 writes
+hda4 (swap): 0 reads, 0 writes
+Console: 8094 characters output
+Keyboard: 0 keys pressed
+Exception: 6 page faults
+Powering off...
+[34mChecking:[0m perl -I../.. ../../tests/userprog/args-none.ck tests/userprog/args-none tests/userprog/args-none.result
+[31mFAIL tests/userprog/args-none
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (args) begin
+  (args) argc = 1
+  (args) argv[0] = 'args-none'
+  (args) argv[1] = null
+  (args) end
+  args-none: exit(0)
+Differences in `diff -u' format:
++ [00;34mTRACE | ../../userprog/process.c:47:process_execute()       | Started process execute: args-none[0m
++ [00;34mTRACE | ../../userprog/process.c:117:start_process()        | start_process()[0m
++ [00;34mTRACE | ../../userprog/process.c:377:load()                 | load()[0m
++ [00;34mTRACE | ../../userprog/process.c:596:load_segment()         | load_segment()[0m
++ [00;36mINFO  | ../../userprog/process.c:597:load_segment()         | upage in load_seg: [08048000][0m
++ [00;35mDEBUG | ../../vm/page.c:246:setup_spte_from_file()          | Key goinging into HASH: [8048] | UPAGE passed in setup_spte_from_file() [8048000][0m
++ [00;35mDEBUG | ../../vm/page.c:246:setup_spte_from_file()          | Key goinging into HASH: [8049] | UPAGE passed in setup_spte_from_file() [8049000][0m
++ [00;35mDEBUG | ../../vm/page.c:246:setup_spte_from_file()          | Key goinging into HASH: [804a] | UPAGE passed in setup_spte_from_file() [804a000][0m
++ [00;35mDEBUG | ../../vm/page.c:246:setup_spte_from_file()          | Key goinging into HASH: [804b] | UPAGE passed in setup_spte_from_file() [804b000][0m
++ [00;34mTRACE | ../../userprog/process.c:596:load_segment()         | load_segment()[0m
++ [00;36mINFO  | ../../userprog/process.c:597:load_segment()         | upage in load_seg: [0804c000][0m
++ [00;35mDEBUG | ../../vm/page.c:246:setup_spte_from_file()          | Key goinging into HASH: [804c] | UPAGE passed in setup_spte_from_file() [804c000][0m
++ [00;34mTRACE | ../../userprog/process.c:662:setup_stack()          | setup_stack()[0m
++ [00;36mINFO  | ../../vm/page.c:217:setup_spte_general()            | Key goinging into HASH: [0000] | UPAGE passed in setup_spte_general() [0000][0m
++ [00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
++ [00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[0] | user:[1][0m
++ [00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
++ [00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[ 8048852][0m
++ [00;35mDEBUG | ../../vm/page.c:339:find_spte()                     | KPAGE: [00000000] | UPAGE: [08048000] | Key:[00008048] in find_spte before handle_mm()[0m
++ [00;35mDEBUG | ../../vm/page.c:143:load_page()                     | DID  READ 4096 BYTES FROM FILE, YAY[0m
++ [00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
++ [00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[0] | user:[1][0m
++ [00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
++ [00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[ 804b050][0m
++ [00;35mDEBUG | ../../vm/page.c:339:find_spte()                     | KPAGE: [00000000] | UPAGE: [0804b000] | Key:[0000804b] in find_spte before handle_mm()[0m
++ [00;35mDEBUG | ../../vm/page.c:143:load_page()                     | DID  READ 1954 BYTES FROM FILE, YAY[0m
++ [00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
++ [00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[1] | user:[1][0m
++ [00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
++ [00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[ 804cd44][0m
++ [00;35mDEBUG | ../../vm/page.c:339:find_spte()                     | KPAGE: [00000000] | UPAGE: [0804c000] | Key:[0000804c] in find_spte before handle_mm()[0m
++ [00;35mDEBUG | ../../vm/page.c:143:load_page()                     | DID  READ 2056 BYTES FROM FILE, YAY[0m
++ [00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
++ [00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[0] | user:[1][0m
++ [00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
++ [00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[ 80490af][0m
++ [00;35mDEBUG | ../../vm/page.c:339:find_spte()                     | KPAGE: [00000000] | UPAGE: [08049000] | Key:[00008049] in find_spte before handle_mm()[0m
++ [00;35mDEBUG | ../../vm/page.c:143:load_page()                     | DID  READ 4096 BYTES FROM FILE, YAY[0m
++ [00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
++ [00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[0] | user:[1][0m
++ [00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
++ [00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[ 804a2e6][0m
++ [00;35mDEBUG | ../../vm/page.c:339:find_spte()                     | KPAGE: [00000000] | UPAGE: [0804a000] | Key:[0000804a] in find_spte before handle_mm()[0m
++ [00;35mDEBUG | ../../vm/page.c:143:load_page()                     | DID  READ 4096 BYTES FROM FILE, YAY[0m
++ [00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
++ [00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [9][0m
+  (args) begin
++ [00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
++ [00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [9][0m
+  (args) argc = 1
++ [00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
++ [00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [9][0m
+  (args) argv[0] = 'args-none'
++ [00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
++ [00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [9][0m
+  (args) argv[1] = null
++ [00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
++ [00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [9][0m
+  (args) end
++ [00;34mTRACE | ../../userprog/syscall.c:165:syscall_handler()      | syscall_handler()[0m
++ [00;36mINFO  | ../../userprog/syscall.c:191:syscall_handler()      | Syscall number [1][0m
++ [00;34mTRACE | ../../userprog/exception.c:137:page_fault()         | page_fault()[0m
++ [00;36mINFO  | ../../userprog/exception.c:169:page_fault()         | not_present:[1] | write:[0] | user:[0][0m
++ [00;36mINFO  | ../../userprog/exception.c:170:page_fault()         | Thread_Name: args-none[0m
++ [00;35mDEBUG | ../../userprog/exception.c:171:page_fault()         | Fault_Address in Exeception.c:[8401f08b][0m
++ [00;36mINFO  | ../../vm/page.c:286:handle_mm_fault()               | ADDR: [8401f08b] is not part of this thread[0m
++ [00;31mERROR | ../../userprog/exception.c:184:page_fault()         | WENT WRONG IN handle_mm_fault()[0m
++ [00;34mTRACE | ../../userprog/exception.c:196:page_fault()         | in page_fault(), BULL section, in the if statement[0m
+  args-none: exit(0)[0m
