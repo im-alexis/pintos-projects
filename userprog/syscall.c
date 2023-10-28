@@ -166,6 +166,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     lock_init(&file_lock);                 /* lock for any file related activity*/
     struct thread *cur = thread_current(); /*current thread calling a system call*/
     uint32_t *esp = f->esp;
+    cur->stack_pointer = f->esp;
 
     if (!valid_ptr_v2((const void *)esp)) /*Validates the Stack Pointer */
     {

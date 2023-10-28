@@ -7,6 +7,7 @@
 #include "userprog/gdt.h"
 #include "process.h"
 
+#include "threads/vaddr.h";
 #include "vm/page.h"
 #include "threads/thread.h"
 #include "lib/kernel/hash.h"
@@ -14,6 +15,7 @@
 #define LOGGING_LEVEL 6
 
 #include <log.h>
+#define MAX_STACK_SIZE 0x800000
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -179,7 +181,36 @@ page_fault(struct intr_frame *f)
         goto BULL;
     }
 
-    if (!handle_mm_fault((void *)fault_addr))
+    void *fault_page = (void *)pg_round_down(fault_addr);
+
+    /*
+    Growing the stack
+    */
+    bool on_stack, stack_addr;
+    void *stack_ptr = user ? (void *)f->esp : cur->stack_pointer;                                  /* decide which stack_ptr it is going to be */
+    on_stack = (stack_ptr <= fault_addr || fault_addr == f->esp - 4 || fault_addr == f->esp - 32); // make sure the addrs is below stack_ptr | make sure the max is distance aways is 32 ?? |
+    stack_addr = (PHYS_BASE - MAX_STACK_SIZE <= fault_addr && fault_addr < PHYS_BASE);
+    if (on_stack && stack_addr)
+    {
+        if (find_spte(cur->spt_hash, fault_page) == NULL)
+        {
+            log(L_DEBUG, "Growing the stack, spte for addr: [%8x] not found.", fault_page);
+            if (setup_spte_general(fault_page) == NULL)
+            {
+                log(L_ERROR, "Couldn't create spte general, while growing the stack");
+                goto BULL;
+            }
+            if (!handle_mm_fault(fault_page))
+            {
+                log(L_ERROR, "handle_mm_fault() failed while growing stack", fault_page);
+                goto BULL;
+            }
+
+            return;
+        }
+    }
+
+    if (!handle_mm_fault(fault_page))
     {
         log(L_ERROR, "WENT WRONG IN handle_mm_fault()", spte->kaddr, spte->uaddr);
         goto BULL;

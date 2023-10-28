@@ -101,8 +101,11 @@ static bool setup_stack_page(void **esp, int argc, char *argv[])
         cur->stack_pointer = esp;
         return true;
     }
-
-    return false;
+    else
+    {
+        /* have some freeing mechanism*/
+        return false;
+    }
 }
 
 /*
@@ -110,6 +113,7 @@ static bool setup_stack_page(void **esp, int argc, char *argv[])
 */
 bool load_page(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
 {
+    log(L_TRACE, "lodd_page(kaddr: [%08x], spte: [%08x])", kaddr, spte);
     /*
      * Using file_read_at()
      * Write physical memory as much as read_bytes by file_read_at
@@ -154,18 +158,8 @@ bool load_page(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
             // struct file *file = spte->file;
             size_t page_read_bytes = spte->read_bytes < PGSIZE ? spte->read_bytes : PGSIZE;
             size_t page_zero_bytes = PGSIZE - page_read_bytes;
-            // off_t num = file_read_at(spte->file, spte->kaddr, page_read_bytes, spte->ofs);
-            //  file_seek(spte->file, spte->ofs);
-            //   off_t num = file_read(spte->file, kaddr, spte->read_bytes);
-
-            // if ((int)num != (int)page_read_bytes)
-            // {
-            //     log(L_ERROR, "DID NOT READ %d BYTES FROM FILE, READ %d BYTES, PAIN", page_read_bytes, num);
-            //     // palloc_free_page(kpage);
-            //     return false;
-            // }
-            // log(L_DEBUG, "DID  READ %d BYTES FROM FILE, YAY", page_read_bytes, num);
             memset(kaddr, 0, PGSIZE);
+            log(L_DEBUG, "Set a page addr %08x] to zero", kaddr);
             return true;
 
             break;
@@ -214,6 +208,8 @@ bool load_page(void *kaddr, struct Supplemental_Page_Table_Entry *spte)
  */
 struct Supplemental_Page_Table_Entry *setup_spte_general(void *addr)
 {
+    log(L_TRACE, "setup_spte_general(addr: [%08x]])", addr);
+
     struct thread *curr = thread_current();
 
     struct Supplemental_Page_Table_Entry *spte = malloc(sizeof(struct Supplemental_Page_Table_Entry));
@@ -225,6 +221,9 @@ struct Supplemental_Page_Table_Entry *setup_spte_general(void *addr)
     spte->key = hash_key;
     spte->source = GENERAL;
     spte->file = NULL;
+    spte->ofs = 0;
+    spte->read_bytes = 0;
+    spte->writable = true;
     log(L_INFO, "Key goinging into HASH: [%04x] | UPAGE passed in setup_spte_general() [%04x]", spte->key, spte->uaddr);
 
     hash_insert(&curr->spt_hash, &spte->hash_elem);
@@ -237,6 +236,7 @@ struct Supplemental_Page_Table_Entry *setup_spte_general(void *addr)
  */
 struct Supplemental_Page_Table_Entry *setup_spte_from_file(void *upage, struct file *file, off_t ofs, bool writable, uint32_t read_bytes)
 {
+    log(L_TRACE, "setup_spte_from_file(upage: [%08x], file: [%08x], ofs: [%d], writable: [%d], read_bytes: [%d])", upage, file, writable, writable, read_bytes);
     struct thread *curr = thread_current();
 
     struct Supplemental_Page_Table_Entry *spte = (struct supplemental_page_table_entry *)malloc(sizeof(struct Supplemental_Page_Table_Entry));
@@ -248,7 +248,6 @@ struct Supplemental_Page_Table_Entry *setup_spte_from_file(void *upage, struct f
     uint32_t hash_key = ((uint32_t)upage) >> 12; /* Making page # (20 bits) the key for hash*/
     spte->key = hash_key;
     spte->file = file;
-
     spte->read_bytes = read_bytes;
 
     log(L_DEBUG, "Key goinging into HASH: [%04x] | UPAGE passed in setup_spte_from_file() [%04x]", spte->key, spte->uaddr);
@@ -271,6 +270,7 @@ struct Supplemental_Page_Table_Entry *setup_spte_from_file(void *upage, struct f
  & if memory allocation fails. */
 bool install_page(void *upage, void *kpage, bool writable)
 {
+    log(L_TRACE, "install_page(upage: [%08x], kpage: [%08x], writable: [%d])", upage, kpage, writable);
     struct thread *t = thread_current();
 
     /* Verify that there's not already a page at that virtual
@@ -284,7 +284,7 @@ bool install_page(void *upage, void *kpage, bool writable)
 
 bool handle_mm_fault(void *addr)
 {
-
+    log(L_TRACE, "handle_mm_fault(addr: [%08x])", addr);
     /* Get a page of memory. */
 
     struct thread *cur = thread_current();
@@ -294,7 +294,7 @@ bool handle_mm_fault(void *addr)
         log(L_INFO, "ADDR: [%08x] is not part of this thread", addr);
         return false;
     }
-    // log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in handle_mm_fault\n", spte->kaddr, spte->uaddr);
+    // log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in handle_mm_fault", spte->kaddr, spte->uaddr);
     void *kpage = palloc_get_page(PAL_USER); /* Switched it to void */
     if (kpage == NULL)
     {
@@ -303,7 +303,7 @@ bool handle_mm_fault(void *addr)
         return false;
     }
     spte->kaddr = kpage;
-    // log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in handle_mm_fault\n", spte->kaddr, spte->uaddr);
+    log(L_TRACE, "KPAGE: [%08x] | UPAGE: [%08x] in handle_mm_fault", spte->kaddr, spte->uaddr);
 
     /* Would do the loading*/
     if (!load_page(spte->kaddr, spte))
@@ -318,6 +318,7 @@ bool handle_mm_fault(void *addr)
         return false;
     }
     spte->location = MEMORY;
+    log(L_TRACE, "handle_mm_fault() was successful", spte->kaddr, spte->uaddr);
     return true;
     /*
         When a page fault occurs, allocate physical memory
@@ -344,7 +345,7 @@ struct Supplemental_Page_Table_Entry *find_spte(struct hash hash, void *addr)
     if (e != NULL)
     {
         result = hash_entry(e, struct Supplemental_Page_Table_Entry, hash_elem);
-        log(L_DEBUG, "KPAGE: [%08x] | UPAGE: [%08x] | Key:[%08x] in find_spte before handle_mm()", result->kaddr, result->uaddr, result->key);
+        log(L_DEBUG, "KPAGE: [%08x] | UPAGE: [%08x] | Key:[%08x], spte was found", result->kaddr, result->uaddr, result->key);
     }
     return result;
 }
