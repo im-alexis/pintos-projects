@@ -5,8 +5,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "vm/frame.h"
+#include <bitmap.h>
+#include <hash.h>
+
 
 /* Page directory with kernel mappings only. */
 extern uint32_t *init_page_dir;
+
+extern struct frame_table_type *frameTable;
 
 #endif /* threads/init.h */

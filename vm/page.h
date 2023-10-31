@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include "threads/synch.h"
 
 #include "lib/kernel/hash.h"
 #include "vm/frame.h"

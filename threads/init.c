@@ -39,8 +39,12 @@
 #include "filesys/fsutil.h"
 #endif
 
+#include "vm/frame.h"
+
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
+
+struct frame_table_type *frameTable;
 
 #ifdef FILESYS
 /* -f: Format the file system? */
@@ -77,8 +81,7 @@ static void locate_block_device(enum block_type, const char *name);
 #endif
 
 /* Pintos main program. */
-int
-main(void)
+int main(void)
 {
     char **argv;
 
@@ -102,6 +105,25 @@ main(void)
     palloc_init(user_page_limit);
     malloc_init();
     paging_init();
+
+    void *addr;
+    frameTable = (struct frame_table_type *)malloc(sizeof(struct frame_table_type));
+    frameTable->how_many_pages_taken = 0;
+    list_init(&frameTable->frames);
+    size_t size = 367;
+    frameTable->occupied = bitmap_create(size);
+    hash_init(&frameTable->frame_hash, frame_hash, frame_less, NULL); /* Initialization of HASH, NOT SURE IF THIS IS THE SPOT */
+
+    // for(int i = 0; i < 367; i++)
+    // {
+    //     addr = palloc_get_page(PAL_USER);
+    //     struct frame_table_entry *fte = vm_frame_table_entry_init(&addr);
+    //     fte->key = i;
+    //     list_push_back(&frameTable->frames, &fte->frame);
+    //     hash_insert(&(frameTable->frame_hash), &(fte->hash_elem));
+    // }
+
+    frameTable->clock_hand = *(list_begin(&(frameTable->frames)));
 
     /* Segmentation. */
 #ifdef USERPROG
@@ -168,14 +190,16 @@ paging_init(void)
 
     pd = init_page_dir = palloc_get_page(PAL_ASSERT | PAL_ZERO);
     pt = NULL;
-    for (page = 0; page < init_ram_pages; page++) {
+    for (page = 0; page < init_ram_pages; page++)
+    {
         uintptr_t paddr = page * PGSIZE;
         char *vaddr = ptov(paddr);
         size_t pde_idx = pd_no(vaddr);
         size_t pte_idx = pt_no(vaddr);
         bool in_kernel_text = &_start <= vaddr && vaddr < &_end_kernel_text;
 
-        if (pd[pde_idx] == 0) {
+        if (pd[pde_idx] == 0)
+        {
             pt = palloc_get_page(PAL_ASSERT | PAL_ZERO);
             pd[pde_idx] = pde_create(pt);
         }
@@ -188,7 +212,7 @@ paging_init(void)
      * new page tables immediately.  See [IA32-v2a] "MOV--Move
      * to/from Control Registers" and [IA32-v3a] 3.7.5 "Base Address
      * of the Page Directory". */
-    asm volatile ("movl %0, %%cr3" : : "r" (vtop(init_page_dir)));
+    asm volatile("movl %0, %%cr3" : : "r"(vtop(init_page_dir)));
 }
 
 /* Breaks the kernel command line into words and returns them as
@@ -204,8 +228,10 @@ read_command_line(void)
     argc = *(uint32_t *)ptov(LOADER_ARG_CNT);
     p = ptov(LOADER_ARGS);
     end = p + LOADER_ARGS_LEN;
-    for (i = 0; i < argc; i++) {
-        if (p >= end) {
+    for (i = 0; i < argc; i++)
+    {
+        if (p >= end)
+        {
             PANIC("command line arguments overflow");
         }
 
@@ -216,10 +242,14 @@ read_command_line(void)
 
     /* Print kernel command line. */
     printf("Kernel command line:");
-    for (i = 0; i < argc; i++) {
-        if (strchr(argv[i], ' ') == NULL) {
+    for (i = 0; i < argc; i++)
+    {
+        if (strchr(argv[i], ' ') == NULL)
+        {
             printf(" %s", argv[i]);
-        } else {
+        }
+        else
+        {
             printf(" '%s'", argv[i]);
         }
     }
@@ -233,43 +263,60 @@ read_command_line(void)
 static char **
 parse_options(char **argv)
 {
-    for (; *argv != NULL && **argv == '-'; argv++) {
+    for (; *argv != NULL && **argv == '-'; argv++)
+    {
         char *save_ptr;
         char *name = strtok_r(*argv, "=", &save_ptr);
         char *value = strtok_r(NULL, "", &save_ptr);
 
-        if (!strcmp(name, "-h")) {
+        if (!strcmp(name, "-h"))
+        {
             usage();
-        } else if (!strcmp(name, "-q")) {
+        }
+        else if (!strcmp(name, "-q"))
+        {
             shutdown_configure(SHUTDOWN_POWER_OFF);
-        } else if (!strcmp(name, "-r")) {
+        }
+        else if (!strcmp(name, "-r"))
+        {
             shutdown_configure(SHUTDOWN_REBOOT);
         }
 #ifdef FILESYS
-        else if (!strcmp(name, "-f")) {
+        else if (!strcmp(name, "-f"))
+        {
             format_filesys = true;
-        } else if (!strcmp(name, "-filesys")) {
+        }
+        else if (!strcmp(name, "-filesys"))
+        {
             filesys_bdev_name = value;
-        } else if (!strcmp(name, "-scratch")) {
+        }
+        else if (!strcmp(name, "-scratch"))
+        {
             scratch_bdev_name = value;
         }
 #ifdef VM
-        else if (!strcmp(name, "-swap")) {
+        else if (!strcmp(name, "-swap"))
+        {
             swap_bdev_name = value;
         }
 #endif
 #endif
-        else if (!strcmp(name, "-rs")) {
+        else if (!strcmp(name, "-rs"))
+        {
             random_init(atoi(value));
-        } else if (!strcmp(name, "-mlfqs")) {
+        }
+        else if (!strcmp(name, "-mlfqs"))
+        {
             thread_mlfqs = true;
         }
 #ifdef USERPROG
-        else if (!strcmp(name, "-ul")) {
+        else if (!strcmp(name, "-ul"))
+        {
             user_page_limit = atoi(value);
         }
 #endif
-        else {
+        else
+        {
             PANIC("unknown option `%s' (use -h for help)", name);
         }
     }
@@ -308,42 +355,50 @@ static void
 run_actions(char **argv)
 {
     /* An action. */
-    struct action {
-        char *name;                      /* Action name. */
-        int   argc;                      /* # of args, including action name. */
-        void  (*function) (char **argv); /* Function to execute action. */
+    struct action
+    {
+        char *name;                    /* Action name. */
+        int argc;                      /* # of args, including action name. */
+        void (*function)(char **argv); /* Function to execute action. */
     };
 
     /* Table of supported actions. */
     static const struct action actions[] =
-    {
-        { "run",     2, run_task       },
+        {
+            {"run", 2, run_task},
 #ifdef FILESYS
-        { "ls",      1, fsutil_ls      },
-        { "cat",     2, fsutil_cat     },
-        { "rm",      2, fsutil_rm      },
-        { "extract", 1, fsutil_extract },
-        { "append",  2, fsutil_append  },
+            {"ls", 1, fsutil_ls},
+            {"cat", 2, fsutil_cat},
+            {"rm", 2, fsutil_rm},
+            {"extract", 1, fsutil_extract},
+            {"append", 2, fsutil_append},
 #endif
-        { NULL,      0, NULL           },
-    };
+            {NULL, 0, NULL},
+        };
 
-    while (*argv != NULL) {
+    while (*argv != NULL)
+    {
         const struct action *a;
         int i;
 
         /* Find action name. */
-        for (a = actions; ; a++) {
-            if (a->name == NULL) {
+        for (a = actions;; a++)
+        {
+            if (a->name == NULL)
+            {
                 PANIC("unknown action `%s' (use -h for help)", *argv);
-            } else if (!strcmp(*argv, a->name)) {
+            }
+            else if (!strcmp(*argv, a->name))
+            {
                 break;
             }
         }
 
         /* Check for required arguments. */
-        for (i = 1; i < a->argc; i++) {
-            if (argv[i] == NULL) {
+        for (i = 1; i < a->argc; i++)
+        {
+            if (argv[i] == NULL)
+            {
                 PANIC("action `%s' requires %d argument(s)", *argv, a->argc - 1);
             }
         }
@@ -393,7 +448,7 @@ usage(void)
 #ifdef USERPROG
            "  -ul=COUNT          Limit user memory to COUNT pages.\n"
 #endif
-           );
+    );
     shutdown_power_off();
 }
 
@@ -418,20 +473,27 @@ locate_block_device(enum block_type role, const char *name)
 {
     struct block *block = NULL;
 
-    if (name != NULL) {
+    if (name != NULL)
+    {
         block = block_get_by_name(name);
-        if (block == NULL) {
+        if (block == NULL)
+        {
             PANIC("No such block device \"%s\"", name);
         }
-    } else {
-        for (block = block_first(); block != NULL; block = block_next(block)) {
-            if (block_type(block) == role) {
+    }
+    else
+    {
+        for (block = block_first(); block != NULL; block = block_next(block))
+        {
+            if (block_type(block) == role)
+            {
                 break;
             }
         }
     }
 
-    if (block != NULL) {
+    if (block != NULL)
+    {
         printf("%s: using %s\n", block_type_name(role), block_name(block));
         block_set_role(role, block);
     }

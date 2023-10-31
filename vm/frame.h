@@ -2,24 +2,50 @@
 #define VM_FRAME_H
 
 #include <hash.h>
+#include <list.h>
+#include <bitmap.h>
 #include "lib/kernel/hash.h"
+#include "vm/page.h"
 
 #include "threads/synch.h"
 #include "threads/palloc.h"
 
-struct Fram_Table_Entry
+struct frame_table_type
+{
+    struct list frames;
+    struct hash frame_hash;
+    struct bitmap *occupied;
+    struct list_elem clock_hand;
+    uint32_t how_many_pages_taken;
+};
+
+struct frame_table_entry
 {
     struct hash_elem hash_elem;
     uint32_t key; /* Key */
+
+    void *frame_addr;
+    struct Supplemental_Page_Table_Entry *spte;
+    struct list_elem frame;
+
+    uint32_t clock_index;
 };
 
 /* Functions for Frame manipulation. */
 
+bool frame_hash(const struct hash_elem *p_, void *aux);
+
+bool frame_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux);
+
 /* Initializes the virtual memory frame system. */
-void vm_frame_init(void);
+void vm_frame_init(size_t user_page_limit);
+
+/* Initializes the frame table. */
+struct frame_table_entry *vm_frame_table_entry_init(void *addr);
 
 /* Allocates a frame for the given user page, using specified allocation flags. */
-void *vm_frame_allocate(enum palloc_flags flags, void *upage);
+
+void *vm_frame_allocate(enum palloc_flags flags, struct Supplemental_Page_Table_Entry *spte);
 
 /* Frees a previously allocated frame. */
 void vm_frame_free(void *kpage);

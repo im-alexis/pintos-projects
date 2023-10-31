@@ -63,8 +63,8 @@ userprog_SRC += userprog/tss.c		# TSS management.
 
 # Virutal Memory code.
 #vm_SRC = vm/file.c			# Some file.
-vm_SRC = vm/page.c			# Supplemental Page Table
-#vm_SRC = vm/frame.c 		# Temporarily Commented out
+vm_SRC = vm/frame.c 		# Temporarily Commented out
+vm_SRC += vm/page.c			# Supplemental Page Table
 #vm_SRC = vm/swap.c			# Temporarily Commented out
 
 # Filesystem code.
