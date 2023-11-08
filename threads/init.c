@@ -106,13 +106,13 @@ int main(void)
     malloc_init();
     paging_init();
 
-    void *addr;
-    frameTable = (struct frame_table_type *)malloc(sizeof(struct frame_table_type));
-    frameTable->how_many_pages_taken = 0;
-    list_init(&frameTable->frames);
-    size_t size = 367;
-    frameTable->occupied = bitmap_create(size);
-    hash_init(&frameTable->frame_hash, frame_hash, frame_less, NULL); /* Initialization of HASH, NOT SURE IF THIS IS THE SPOT */
+    // void *addr;
+    // frameTable = (struct frame_table_type *)malloc(sizeof(struct frame_table_type));
+    // frameTable->how_many_pages_taken = 0;
+    // list_init(&frameTable->frames);
+    // size_t size = 367;
+    // frameTable->occupied = bitmap_create(size);
+    // hash_init(&frameTable->frame_hash, frame_hash, frame_less, NULL); /* Initialization of HASH, NOT SURE IF THIS IS THE SPOT */
 
     // for(int i = 0; i < 367; i++)
     // {
@@ -123,7 +123,7 @@ int main(void)
     //     hash_insert(&(frameTable->frame_hash), &(fte->hash_elem));
     // }
 
-    frameTable->clock_hand = *(list_begin(&(frameTable->frames)));
+    // frameTable->clock_hand = *(list_begin(&(frameTable->frames)));
 
     /* Segmentation. */
 #ifdef USERPROG

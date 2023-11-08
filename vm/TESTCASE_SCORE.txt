@@ -2,21 +2,13 @@ FAILED TESTCASES:
 
 FROM userprog:
 
-FAIL tests/userprog/sc-boundary -> NEWLY FAILED
-
 FAIL tests/userprog/rox-child
 FAIL tests/userprog/rox-multichild
 
 FAIL tests/filesys/base/syn-read
-FAIL tests/filesys/base/syn-remove
 FAIL tests/filesys/base/syn-write
 
 FROM VM:
-
-FAIL tests/vm/pt-grow-stk-sc -> PASS
-FAIL tests/vm/pt-grow-stack -> PASS
-FAIL tests/vm/pt-grow-pusha -> PASS
-FAIL tests/vm/pt-big-stk-obj -> PASS
 
 FAIL tests/vm/page-linear
 FAIL tests/vm/page-parallel

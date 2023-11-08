@@ -4,7 +4,6 @@
 #include <hash.h>
 #include <list.h>
 #include <bitmap.h>
-#include "lib/kernel/hash.h"
 #include "vm/page.h"
 
 #include "threads/synch.h"
@@ -12,17 +11,17 @@
 
 struct frame_table_type
 {
-    struct list frames;
-    struct hash frame_hash;
-    struct bitmap *occupied;
-    struct list_elem clock_hand;
-    uint32_t how_many_pages_taken;
+    struct list frames;            /* Left here per Alexis' request. Would be used if decided to use list implementation. */
+    struct hash frame_hash;        /* Hashmap that holds the frame table */
+    struct bitmap *occupied;       /* Bitmap that keeps track of occupied frames. */
+    uint32_t clock_hand_key;       /* Hash element key for clock hand. */
+    uint32_t how_many_pages_taken; // Why is this necessary?
 };
 
 struct frame_table_entry
 {
     struct hash_elem hash_elem;
-    uint32_t key; /* Key */
+    uint32_t key; /* Key */ /* Can be used as the index of in the frame table */
 
     void *frame_addr;
     struct Supplemental_Page_Table_Entry *spte;
@@ -44,8 +43,9 @@ void vm_frame_init(size_t user_page_limit);
 struct frame_table_entry *vm_frame_table_entry_init(void *addr);
 
 /* Allocates a frame for the given user page, using specified allocation flags. */
+void *vm_frame_allocate(enum palloc_flags flags);
 
-void *vm_frame_allocate(enum palloc_flags flags, struct Supplemental_Page_Table_Entry *spte);
+struct frame_table_entry *vm_find_eviction_frame(struct frame_table_type *ft);
 
 /* Frees a previously allocated frame. */
 void vm_frame_free(void *kpage);
@@ -58,6 +58,8 @@ void vm_frame_pin(void *kpage);
 
 /* Unpins a previously pinned frame, allowing it to be considered for eviction. */
 void vm_frame_unpin(void *kpage);
+
+struct frame_table_entry *vm_frame_eviction(struct frame_table_entry *frame);
 
 #endif
 /*
