@@ -86,7 +86,7 @@ void matelo()
 {
     log(L_TRACE, "matelo()");
     struct thread *cur = thread_current();
-    close_thread_files();
+    // close_thread_files();
     cur->exit_code = -1;
     thread_exit();
 }
@@ -209,7 +209,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         int exit_code = ((int)*arg0);
         cur->exit_code = ((int)*arg0);
-        close_thread_files();
+        // close_thread_files();
         thread_exit();
         break;
     }
@@ -266,9 +266,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             matelo();
             return;
         }
-        /*
-        ^ OLD
-        */
+
         lock_acquire(&file_lock);
         struct file *opened_file = filesys_open(file);
         lock_release(&file_lock);
@@ -278,47 +276,51 @@ syscall_handler(struct intr_frame *f UNUSED)
             f->eax = -1;
             return;
         }
-
-        int result = search_by_file(opened_file);
-        if (result != -1)
-        {
-            lock_acquire(&file_lock);
-            file_close(file);
-            lock_release(&file_lock);
-            f->eax = -1;
-            return;
-        }
-        else
-        {
-            // file_allow_write(opened_file);
-            f->eax = add_to_table(opened_file);
-            break;
-        }
         /*
-        ^ OLD
+         ^ OLD
         */
-        /*
-        & NEW VERSION
-         */
-
-        // if (search_by_file_plus(file) == -1)
+        // int result = search_by_file(opened_file);
+        // if (result != -1)
         // {
-        //     f->eax = -1;
-        //     return;
-        // }
-        // struct file_plus *pfile = create_file_plus(opened_file, file);
-        // if (pfile == NULL)
-        // {
-        //     log(L_ERROR, "Could not create a pfile");
-        //     destroy_plus_file(pfile, true);
+        //     lock_acquire(&file_lock);
+        //     file_close(file);
+        //     lock_release(&file_lock);
         //     f->eax = -1;
         //     return;
         // }
         // else
         // {
-        //     f->eax = add_to_table_plus(pfile);
+        //     // file_allow_write(opened_file);
+        //     f->eax = add_to_table(opened_file);
         //     break;
         // }
+        /*
+        ^ OLD
+        */
+
+        /*
+        & NEW VERSION
+         */
+
+        if (search_by_filename_plus(file) != -1)
+        {
+            log(L_ERROR, "pfile exist in the fdt+");
+            f->eax = -1;
+            return;
+        }
+        struct file_plus *pfile = create_file_plus(opened_file, file);
+        if (pfile == NULL)
+        {
+            log(L_ERROR, "Could not create a pfile");
+            destroy_plus_file(pfile, true);
+            f->eax = -1;
+            return;
+        }
+        else
+        {
+            f->eax = add_to_table_plus(pfile);
+            break;
+        }
 
         /*
         & NEW VERSION
@@ -335,28 +337,28 @@ syscall_handler(struct intr_frame *f UNUSED)
         /*
         ^ OLD
         */
-        if (!valid_ptr_v2((const void *)arg0))
-            return;
+        // if (!valid_ptr_v2((const void *)arg0))
+        //     return;
 
-        char *file = ((const char *)*arg0);
-        lock_acquire(&file_lock);
-        /*
-        !This doesn't work
-        */
-        bool ret = removed_from_table_by_file(file);
-        lock_release(&file_lock);
-        if (ret)
-        {
-            lock_acquire(&file_lock);
-            f->eax = filesys_remove(file);
-            lock_release(&file_lock);
+        // char *file = ((const char *)*arg0);
+        // lock_acquire(&file_lock);
+        // /*
+        // !This doesn't work
+        // */
+        // bool ret = removed_from_table_by_file(file);
+        // lock_release(&file_lock);
+        // if (ret)
+        // {
+        //     lock_acquire(&file_lock);
+        //     f->eax = filesys_remove(file);
+        //     lock_release(&file_lock);
 
-            // true;
-        }
-        else
-        {
-            f->eax = false;
-        }
+        //     // true;
+        // }
+        // else
+        // {
+        //     f->eax = false;
+        // }
         /*
         ^ OLD
         */
@@ -364,14 +366,14 @@ syscall_handler(struct intr_frame *f UNUSED)
         & NEW VERSION
         */
 
-        // int fd = search_by_filename_plus(name);
-        // if (fd != -1)
-        // {
-        //     removed_from_table_by_filename_plus(fd);
-        // }
-        // lock_acquire(&file_lock);
-        // f->eax = filesys_remove(name);
-        // lock_release(&file_lock);
+        int fd = search_by_filename_plus(name);
+        if (fd != -1)
+        {
+            removed_from_table_by_filename_plus(fd);
+        }
+        lock_acquire(&file_lock);
+        f->eax = filesys_remove(name);
+        lock_release(&file_lock);
 
         /*
        & NEW VERSION
@@ -389,9 +391,9 @@ syscall_handler(struct intr_frame *f UNUSED)
         int fd = ((int)*arg0);
         if ((fd != STDIN_FILENO) && (fd != STDOUT_FILENO))
         {
-            struct file *target = cur->file_descriptor_table[fd];
-            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
-            // struct file *target = t->file;
+            // struct file *target = cur->file_descriptor_table[fd];
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *target = t->file;
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
@@ -431,9 +433,9 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            struct file *fdt = cur->file_descriptor_table[fd];
-            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
-            // struct file *fdt = t->file;
+            // struct file *fdt = cur->file_descriptor_table[fd];
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *fdt = t->file;
 
             if (fdt == NULL)
             {
@@ -478,9 +480,9 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            struct file *target = cur->file_descriptor_table[fd];
-            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
-            // struct file *target = t->file;
+            // struct file *target = cur->file_descriptor_table[fd];
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *target = t->file;
             if (target == NULL)
             {
                 matelo();
@@ -545,9 +547,9 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            struct file *target = cur->file_descriptor_table[fd];
-            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
-            // struct file *target = t->file;
+            // struct file *target = cur->file_descriptor_table[fd];
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *target = t->file;
 
             if (target != NULL)
             {
@@ -581,9 +583,9 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            struct file *target = cur->file_descriptor_table[fd];
-            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
-            // struct file *target = t->file;
+            // struct file *target = cur->file_descriptor_table[fd];
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *target = t->file;
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
@@ -611,16 +613,21 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            struct file *target = cur->file_descriptor_table[fd];
-            // struct file_plus *t = cur->file_descriptor_table_plus[fd];
-            // struct file *target = t->file;
+            // struct file *target = cur->file_descriptor_table[fd];
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *target = NULL;
+            if (t != NULL)
+            {
+                target = t->file;
+            }
+
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
                 file_close(target);
                 lock_release(&file_lock);
-                removed_from_table(fd);
-                // removed_from_table_plus(fd);
+                // removed_from_table(fd);
+                removed_from_table_plus(fd);
             }
         }
 

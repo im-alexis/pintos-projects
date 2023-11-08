@@ -86,6 +86,21 @@ typedef int tid_t;
  * only because they are mutually exclusive: only a thread in the
  * ready state is on the run queue, whereas only a thread in the
  * blocked state is on a semaphore wait list. */
+
+struct file_plus
+{
+    struct file *file;
+    char *name;
+    bool writable;
+};
+
+struct file_plus *create_file_plus(struct file *file, char *filename);
+bool removed_from_table_by_filename_plus(char *filename);
+int search_by_filename_plus(char *target_file);
+void removed_from_table_plus(int fd);
+int add_to_table_plus(struct file_plus *new_file);
+void destroy_plus_file(struct file_plus *pfile, bool close_file);
+
 struct thread
 {
     /* Owned by thread.c. */
@@ -105,6 +120,9 @@ struct thread
 
     void *stack_pointer;
 
+    struct file *process_executing_file;
+    // struct file *parent_executing_file;
+
     // struct Supplemental_Page_Table_Entry *entry; -> Don't think we need
 
 #ifdef USERPROG
@@ -123,9 +141,9 @@ struct thread
     int fdt_index;                              /* Is the index to the next file descriptor */
     int how_many_fd;                            /* Runnning count of how many files this process has open*/
 
-    // struct file_plus *file_descriptor_table_plus[MAX_FD];
-    // int fdt_index_plus;   /* Is the index to the next file descriptor */
-    // int how_many_fd_plus; /* Runnning count of how many files this process has open*/
+    struct file_plus *file_descriptor_table_plus[MAX_FD];
+    int fdt_index_plus;   /* Is the index to the next file descriptor */
+    int how_many_fd_plus; /* Runnning count of how many files this process has open*/
 
 #endif
 

@@ -493,12 +493,19 @@ init_thread(struct thread *t, const char *name, int priority)
     for (int i = 2; i < 20; i++)
     {
         t->file_descriptor_table[i] = NULL;
-        // t->file_descriptor_table_plus[i] = NULL;
+        t->file_descriptor_table_plus[i] = NULL;
+
+        // t->file_descriptor_table_plus[i]->writable = NULL;
     }
 
     t->fdt_index = 2;
     t->how_many_fd = 2;
+
+    t->fdt_index_plus = 2;
+    t->how_many_fd_plus = 2;
     t->exit_code = -1;
+    t->process_executing_file = NULL;
+    // t->parent_executing_file = NULL;
 
     /*semephore initialiazation*/
     sema_init(&t->reading_exit_status, 0);
@@ -729,6 +736,7 @@ bool removed_from_table_by_file(struct file *file)
 
     return false;
 }
+
 int search_by_file(struct file *target_file)
 {
     struct thread *cur = thread_current();
@@ -740,4 +748,137 @@ int search_by_file(struct file *target_file)
         }
     }
     return -1;
+}
+
+/*
+& NEW FUNCTIONs w/ FILE_PLUS types
+*/
+
+/*
+Given a file searches the fdt+ for a matching file given a name
+returns index in fdt+ if found
+else return -1
+*/
+int search_by_filename_plus(char *target_file)
+{
+    log(L_TRACE, "search_by_filename_plus(target_file: [%s])", target_file);
+    struct thread *cur = thread_current();
+    for (int i = 2; i < cur->how_many_fd_plus; i++)
+    {
+        if (!strcmp(cur->file_descriptor_table_plus[i]->name, target_file))
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/*
+Given a file name searches the fdt+ for a matching file given a name
+returns index in fdt+ if found
+else return -1
+*/
+bool removed_from_table_by_filename_plus(char *filename)
+{
+    log(L_TRACE, "removed_from_table_by_filename_plus(filename: [%s])", filename);
+    struct thread *cur = thread_current();
+    int fd = search_by_filename_plus(filename);
+    if (fd != -1)
+    {
+        cur->file_descriptor_table_plus[fd] = NULL;
+        cur->how_many_fd_plus--;
+        return true;
+    }
+    // for (int i = 2; i < MAX_FD; i++)
+    // {
+    //     struct file_plus *looped_file = cur->file_descriptor_table_plus[i];
+    //     if (!strcmp(looped_file->name, filename))
+    //     {
+    //         /*
+    //         Properly rmeove from table
+    //         */
+    //         // free(cur->file_descriptor_table[i]);
+    //     }
+    // }
+
+    return false;
+}
+/*
+Initializes a new file_plus struct, given a filename and struct file
+*/
+struct file_plus *create_file_plus(struct file *file, char *filename)
+{
+    log(L_TRACE, "create_file_plus(file: [%08x], filename: [%s])", file, filename);
+    struct file_plus *new_file = malloc(sizeof(struct file_plus));
+    new_file->file = file;
+
+    new_file->name = malloc(strlen(filename));
+    strlcpy(new_file->name, filename, strlen(filename));
+    // memcpy(&new_file->name, filename, sizeof(filename));
+    log(L_DEBUG, "file_plus:(file: [%08x], name: [%s])", new_file->file, new_file->name);
+    return new_file;
+}
+/*
+Given a file descriptor, it removes
+*/
+void removed_from_table_plus(int fd)
+{
+    log(L_TRACE, "removed_from_table_plus(fd: [%d])", fd);
+    struct thread *cur = thread_current();
+    cur->file_descriptor_table_plus[fd] = NULL;
+    cur->how_many_fd_plus--;
+}
+
+int find_next_table_pos_plus();
+int find_next_table_pos_plus()
+{
+    log(L_TRACE, "find_next_table_pos_plus()");
+    struct thread *cur = thread_current();
+    int ret = -1;
+    for (int i = 2; i < MAX_FD; i++)
+    {
+        if (cur->file_descriptor_table_plus[i] == NULL)
+        {
+            cur->fdt_index_plus = i;
+            ret = i;
+            break;
+        }
+    }
+    log(L_DEBUG, "ret: %d", ret);
+    return ret;
+}
+
+int add_to_table_plus(struct file_plus *new_file)
+{
+    log(L_TRACE, "add_to_table_plus(file_plus: [file:[%08x], name[%s]])", new_file->file, new_file->name);
+    struct thread *cur = thread_current();
+    int val = -1;
+    // add like a loop around
+    if ((cur->fdt_index_plus == MAX_FD - 1) && (cur->how_many_fd_plus != MAX_FD))
+    {
+        log(L_DEBUG, "if statement");
+        find_next_table_pos_plus();
+    }
+    else if (new_file != NULL && (cur->how_many_fd_plus < MAX_FD))
+    {
+        log(L_DEBUG, "else if statement | ");
+        val = cur->fdt_index_plus;
+
+        cur->file_descriptor_table_plus[val] = new_file;
+        cur->fdt_index_plus++;
+        cur->how_many_fd_plus++;
+        // return val;
+    }
+    log(L_DEBUG, "val: %d", val);
+    return val;
+}
+
+void destroy_plus_file(struct file_plus *pfile, bool close_file)
+{
+    log(L_TRACE, "destroy_plus_file(file_plus: [file:[%08x], name[%s]], bool: [%d])", pfile->file, pfile->name, close_file);
+    if (close_file)
+    {
+        file_close(pfile->file);
+    }
+    free(pfile);
 }
