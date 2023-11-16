@@ -10,11 +10,13 @@
 #include "threads/vaddr.h"
 
 #include "string.h"
+#define LOGGING_LEVEL 6
+#include <log.h>
 
 static void syscall_handler(struct intr_frame *);
 static int get_user(const uint8_t *uaddr);
 static bool put_user(uint8_t *udst, uint8_t byte);
-void close_thread_files();
+
 void matelo();
 bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call);
 bool valid_ptr_v2(const void *addy);
@@ -25,6 +27,7 @@ static struct lock file_lock; // lock for synch when doing file related stuff
 void syscall_init(void)
 {
     intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
+    lock_init(&file_lock);
 }
 
 /* Reads a byte at user virtual address UADDR.
@@ -50,35 +53,14 @@ static bool put_user(uint8_t *udst, uint8_t byte)
     return error_code != -1;
 }
 
-void close_thread_files() /* -> it no worky :(  */
-{
-    struct thread *cur = thread_current;
-    if (cur->how_many_fd == 2)
-    {
-        return;
-    }
-    for (int i = 2; i < MAX_FD; i++)
-    {
-        struct file *file = cur->file_descriptor_table[i];
-        if (file != NULL)
-        {
-            lock_acquire(&file_lock);
-            file_close(file);
-            lock_release(&file_lock);
-            cur->file_descriptor_table[i] = NULL;
-            cur->how_many_fd--;
-        }
-        if (cur->how_many_fd == 2)
-            break;
-    }
-}
-
 /*
 Terminates a thread with exit code -1
 matelo (kill it)
 */
-void matelo(struct thread *cur)
+void matelo()
 {
+    log(L_TRACE, "matelo()");
+    struct thread *cur = thread_current();
     close_thread_files();
     cur->exit_code = -1;
     thread_exit();
@@ -97,6 +79,7 @@ args:
 
 bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call)
 {
+    // log(L_TRACE, "Address being validated in valid_ptr():[%08x]\n", addy);
     if (type_of_call == 1)
     {
         if (addy == NULL)
@@ -127,10 +110,11 @@ bool valid_ptr(uint8_t *addy, uint8_t byte, int size, uint8_t type_of_call)
 
 bool valid_ptr_v2(const void *addy)
 {
+    // log(L_TRACE, "Address being validated in valid_ptr_v2():[%08x]\n", addy);
     /* Check to see if the address is NULL, if it is valid for the user and that it is not below the start of virtual memory (0x08084000)  */
     if (!is_user_vaddr(addy) || addy == NULL || addy < (void *)0x08048000)
     {
-        matelo(thread_current());
+        matelo();
         return false;
     }
     return true;
@@ -153,9 +137,11 @@ bool check_buffer(void *buffer, unsigned size)
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
-    lock_init(&file_lock);                 /* lock for any file related activity*/
+    log(L_TRACE, "syscall_handler()");
+    /* lock for any file related activity*/
     struct thread *cur = thread_current(); /*current thread calling a system call*/
     uint32_t *esp = f->esp;
+    cur->stack_pointer = f->esp;
 
     if (!valid_ptr_v2((const void *)esp)) /*Validates the Stack Pointer */
     {
@@ -163,7 +149,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
     if (!(valid_ptr(esp, 0, 4, 0)))
     {
-        matelo(cur);
+        matelo();
         return;
     }
 
@@ -178,6 +164,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         matelo(cur);
         return;
     }
+    log(L_INFO, "Syscall number [%d]", syscall_num);
 
     switch (syscall_num)
     {
@@ -187,35 +174,37 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_HALT:
     {
+        log(L_TRACE, "SYS_HALT");
         f->eax = shutdown_power_off();
         break;
     }
 
     case SYS_EXIT:
     {
+        log(L_TRACE, "SYS_EXIT");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int exit_code = ((int)*arg0);
         cur->exit_code = ((int)*arg0);
-        close_thread_files();
+        // close_thread_files();
         thread_exit();
         break;
     }
 
     case SYS_EXEC:
     {
+        log(L_TRACE, "SYS_EXEC");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         char *file_name = ((const char *)*arg0);
-        // lock_acquire(&file_lock);
         int val = process_execute(file_name);
-        // lock_release(&file_lock);
         f->eax = val;
         break;
     }
 
     case SYS_WAIT:
     {
+        log(L_TRACE, "SYS_WAIT");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         tid_t tid = ((tid_t)*arg0);
@@ -228,13 +217,14 @@ syscall_handler(struct intr_frame *f UNUSED)
     */
     case SYS_CREATE:
     {
+        log(L_TRACE, "SYS_CREATE");
         if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1))
             return;
 
         char *file = ((const char *)*arg0);
         if (file == NULL)
         {
-            matelo(cur);
+            matelo();
             return;
         }
         unsigned size = ((unsigned)*arg1);
@@ -245,62 +235,68 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
     case SYS_OPEN:
     {
+        log(L_TRACE, "SYS_OPEN");
         if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1))
             return;
 
         char *file = ((const char *)*arg0);
         if (file == NULL)
         {
-            matelo(cur);
+            matelo();
             return;
         }
+
+        /*
+        & NEW VERSION
+         */
         lock_acquire(&file_lock);
         struct file *opened_file = filesys_open(file);
         lock_release(&file_lock);
+
         if (opened_file == NULL)
         {
             f->eax = -1;
             return;
         }
-        int result = search_by_file(cur, opened_file);
-        if (result != -1)
+        struct file_plus *pfile = create_file_plus(opened_file, file);
+        if (pfile == NULL)
         {
-            lock_acquire(&file_lock);
-            file_close(file);
-            lock_release(&file_lock);
+            log(L_ERROR, "Could not create a pfile");
+            destroy_plus_file(pfile, true);
             f->eax = -1;
             return;
         }
         else
         {
-            // file_allow_write(opened_file);
-            f->eax = add_to_table(cur, opened_file);
+            f->eax = add_to_table_plus(pfile);
             break;
         }
+
+        /*
+        & NEW VERSION
+        */
     }
 
     case SYS_REMOVE:
     {
-        // search for a file in descriptor table
+        log(L_TRACE, "SYS_REMOVE");
+
         if (!valid_ptr_v2((const void *)arg0))
             return;
 
-        char *file = ((const char *)*arg0);
-        lock_acquire(&file_lock);
-        bool ret = removed_from_table_by_filename(file, cur);
-        lock_release(&file_lock);
-        if (ret)
-        {
-            lock_acquire(&file_lock);
-            f->eax = filesys_remove(file);
-            lock_release(&file_lock);
+        char *name = ((const char *)*arg0);
+        /*
+        & NEW VERSION
+        */
 
-            // true;
-        }
-        else
-        {
-            f->eax = false;
-        }
+        lock_acquire(&file_lock);
+        f->eax = filesys_remove(name);
+        lock_release(&file_lock);
+
+        /*
+       & NEW VERSION
+       */
+
         break;
     }
         // idk what we are doing, we are drunk, sober alexis, look here plz
@@ -308,12 +304,15 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_FILESIZE: // file_length();
     {
+        log(L_TRACE, "SYS_FILESIZE");
+
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int fd = ((int)*arg0);
         if ((fd != STDIN_FILENO) && (fd != STDOUT_FILENO))
         {
-            struct file *target = cur->file_descriptor_table[fd];
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *target = t->file;
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
@@ -330,8 +329,8 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
 
     case SYS_READ: // validate with write check index [0] and [size-1] -> put_user()
-
     {
+        log(L_TRACE, "SYS_READ");
         if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1) || !valid_ptr_v2((const void *)arg2))
             return;
 
@@ -343,7 +342,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
         if (fd == STDOUT_FILENO || fd >= MAX_FD) // check fd table is valid, make sure buffer is a valid pointer, check the size is greater than 0
         {
-            matelo(cur);
+            matelo();
             return;
         }
         else if (fd == STDIN_FILENO)
@@ -353,17 +352,15 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            struct file *fdt = cur->file_descriptor_table[fd];
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *fdt = t->file;
 
             if (fdt == NULL)
             {
-                matelo(cur);
+                matelo();
                 return;
             }
-            lock_acquire(&file_lock);
-            //  file_allow_write(fdt);
             f->eax = file_read(fdt, buffer, size);
-            lock_release(&file_lock);
             break;
         }
 
@@ -372,7 +369,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_WRITE: // validate with read check index [0] and [size-1] -> get_user()
     {
-
+        log(L_TRACE, "SYS_WRITE");
         if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1) || !valid_ptr_v2((const void *)arg2))
             return;
         if (!check_buffer(*arg1, *arg2))
@@ -386,7 +383,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         if (fd == STDIN_FILENO || fd >= MAX_FD || !result)
         {
             f->eax = 0;
-            matelo(cur);
+            matelo();
             return;
         }
         else if (fd == STDOUT_FILENO)
@@ -398,34 +395,26 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            struct file *targeta = cur->file_descriptor_table[fd];
-            if (targeta == NULL)
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *target = t->file;
+            if (target == NULL)
             {
-                matelo(cur);
+                matelo();
                 return;
             }
-            lock_acquire(&file_lock);
-            struct file *exec_file = filesys_open(cur->executing_file);
-            lock_release(&file_lock);
-            if (exec_file->inode == targeta->inode)
+            char *cur_exec_filename = cur->executing_file;
+            char *parent_exec_filename = cur->parent->executing_file;
+            log(L_DEBUG, "cur_exec: [%s] | parent_exec: [%s] | filename [%s]", cur_exec_filename, parent_exec_filename, t->name);
+            log(L_DEBUG, "Comp1 Result: [%d] | Comp2 Result: [%d]", strcmp(cur_exec_filename, t->name), strcmp(parent_exec_filename, t->name));
+            if (!strcmp(cur_exec_filename, t->name) || !strcmp(parent_exec_filename, t->name))
             {
-                lock_acquire(&file_lock);
-                file_close(exec_file);
-                lock_release(&file_lock);
-                cur->exit_code;
+                log(L_ERROR, "Tried to write to ELF file");
                 f->eax = 0;
                 return;
             }
             lock_acquire(&file_lock);
-            file_close(exec_file);
-            lock_release(&file_lock);
-
-            lock_acquire(&file_lock);
-            // file_allow_write(targeta);
-            if (!targeta->deny_write)
-                f->eax = file_write(targeta, buffer, size);
-
-            // file_deny_write(targeta);
+            if (!target->deny_write)
+                f->eax = file_write(target, buffer, size);
             lock_release(&file_lock);
         }
 
@@ -433,6 +422,8 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
     case SYS_SEEK: // file_seek()
     {
+
+        log(L_TRACE, "SYS_SEEK");
         if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1))
             return;
 
@@ -454,7 +445,9 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            struct file *target = cur->file_descriptor_table[fd];
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *target = t->file;
+
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
@@ -468,6 +461,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_TELL: // file_tell();
     {
+        log(L_TRACE, "SYS_TELL");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int fd = ((int)*arg0);
@@ -487,7 +481,9 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
-            struct file *target = cur->file_descriptor_table[fd];
+
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *target = t->file;
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
@@ -496,7 +492,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             }
             else
             {
-                matelo(cur);
+                matelo();
                 return;
             }
         }
@@ -505,23 +501,30 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_CLOSE: // file_close()
     {
+        log(L_TRACE, "SYS_CLOSE");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int fd = ((int)*arg0);
         if (fd == NULL || fd == STDOUT_FILENO || fd == STDIN_FILENO || fd >= MAX_FD)
         {
-            matelo(cur);
+            matelo();
             return;
         }
         else
         {
-            struct file *target = cur->file_descriptor_table[fd];
+            struct file_plus *t = cur->file_descriptor_table_plus[fd];
+            struct file *target = NULL;
+            if (t != NULL)
+            {
+                target = t->file;
+            }
+
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
                 file_close(target);
                 lock_release(&file_lock);
-                removed_from_table(fd, cur);
+                removed_from_table_plus(fd);
             }
         }
 

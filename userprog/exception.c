@@ -6,6 +6,9 @@
 #include "userprog/exception.h"
 #include "userprog/gdt.h"
 
+#define LOGGING_LEVEL 6
+
+#include <log.h>
 /* Number of page faults processed. */
 static long long page_fault_cnt;
 
@@ -118,6 +121,7 @@ kill(struct intr_frame *f)
 static void
 page_fault(struct intr_frame *f)
 {
+    log(L_TRACE, "page_fault()");
     bool not_present; /* True: not-present page, false: writing r/o page. */
     bool write;       /* True: access was write, false: access was read. */
     bool user;        /* True: access by user, false: access by kernel. */
@@ -143,7 +147,7 @@ page_fault(struct intr_frame *f)
     not_present = (f->error_code & PF_P) == 0;
     write = (f->error_code & PF_W) != 0;
     user = (f->error_code & PF_U) != 0;
-
+    log(L_INFO, "Fault_Address :[%8x] | not_present:[%d] | write:[%d] | user:[%d]", fault_addr, not_present, write, user);
     f->eip = f->eax;
     f->eax = 0xffffffff;
 

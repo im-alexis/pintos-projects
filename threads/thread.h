@@ -7,6 +7,8 @@
 #include "synch.h"
 #include "filesys/file.h"
 
+// #include "filesys/experiment/file_plus.h"
+
 /* States in a thread's life cycle. */
 enum thread_status
 {
@@ -83,6 +85,22 @@ typedef int tid_t;
  * only because they are mutually exclusive: only a thread in the
  * ready state is on the run queue, whereas only a thread in the
  * blocked state is on a semaphore wait list. */
+
+struct file_plus
+{
+    struct file *file;
+    char *name;
+    bool writable;
+};
+
+struct file_plus *create_file_plus(struct file *file, char *filename);
+bool removed_from_table_by_filename_plus(char *filename);
+int search_by_filename_plus(char *target_file);
+void removed_from_table_plus(int fd);
+int add_to_table_plus(struct file_plus *new_file);
+void destroy_plus_file(struct file_plus *pfile, bool close_file);
+void close_thread_files();
+
 struct thread
 {
     /* Owned by thread.c. */
@@ -93,34 +111,38 @@ struct thread
     int priority;                 /* Priority. */
     struct list_elem allelem;     /* List element for all threads list. */
     struct list all_process_list; /* So that the thread can access all other threads*/
-    char *executing_file;
+    char *executing_file;         /* Holds the name of the executing file, might switch to actual file, but IDK */
     /* Shared between thread.c and synch.c. */
-    struct list_elem elem; /* List element. */
+    struct list_elem elem;          /* List element. */
+    struct thread *parent;          /* The parant of this thread. */
+    struct semaphore process_semma; /* Semaphore when calling start_process/process_execute combo. */
 
-    struct thread *parent;
-    struct semaphore process_semma;
+    void *stack_pointer;
+
+    struct file *process_executing_file;
+    // struct file *parent_executing_file;
+
+    // struct Supplemental_Page_Table_Entry *entry; -> Don't think we need
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
-    uint32_t *pagedir; /* Page directory. */
 
-    /*
-    Need to inititalize
-     1. file_descriptor_table -> make of size 20
-     2. fdt_index -> make default 3 (STDIN (0), STDOUT (1), STDERR (2) ....)
-     3. Semaphores?
-     4. has_been_waited_one
-    */
+    uint32_t *pagedir;                    /* Page directory. */
     struct semaphore exiting_thread;      /* For when the thread is exiting*/
     struct semaphore reading_exit_status; /* To make sure the parent can read the exit status of the child*/
+    int exit_code;                        /* Holds the exit status for the thread*/
 
-    int exit_code; /* Holds the exit status for the thread*/
-
-    struct file *file_descriptor_table[MAX_FD]; /* Holds File Descriptors per process*/
-    int fdt_index;
-    int how_many_fd; /* Is the index to the next file descriptor */
-    struct list mis_ninos;
+    struct list mis_ninos; /* List of child process belonging to this process */
     struct list_elem chld_thrd_elm;
     bool has_been_waited_on; /* Simple flag to check if a child was waited on or not*/
+
+    struct file *file_descriptor_table[MAX_FD]; /* Holds File Descriptors per process*/
+    int fdt_index;                              /* Is the index to the next file descriptor */
+    int how_many_fd;                            /* Runnning count of how many files this process has open*/
+
+    struct file_plus *file_descriptor_table_plus[MAX_FD];
+    int fdt_index_plus;   /* Is the index to the next file descriptor */
+    int how_many_fd_plus; /* Runnning count of how many files this process has open*/
 
 #endif
 
@@ -166,9 +188,9 @@ int thread_get_load_avg(void);
 bool is_thread(struct thread *t);
 struct thread *find_thread_by_tid(tid_t tid);
 
-int add_to_table(struct thread *cur, struct file *new_file);
-void removed_from_table(int fd, struct thread *cur);
-bool removed_from_table_by_filename(struct thread *cur, struct file *file);
-int search_by_file(struct thread *cur, struct file *target_file);
+int add_to_table(struct file *new_file);
+void removed_from_table(int fd);
+bool removed_from_table_by_file(struct file *file);
+int search_by_file(struct file *target_file);
 
 #endif /* threads/thread.h */

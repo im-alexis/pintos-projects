@@ -32,6 +32,7 @@ static bool load(const char *cmdline, void (**eip)(void), void **esp);
  * thread id, or TID_ERROR if the thread cannot be created. */
 tid_t process_execute(const char *file_name)
 {
+    log(L_TRACE, "process_execute(file_name: [%s])", file_name);
     char *fn_copy;
     char *file_name_cpy, *sav_ptr;
     tid_t tid;
@@ -40,7 +41,7 @@ tid_t process_execute(const char *file_name)
     // To see this print, make sure LOGGING_LEVEL in this file is <= L_TRACE (6)
     // AND LOGGING_ENABLE = 1 in lib/log.h
     // Also, probably won't pass with logging enabled.
-    log(L_TRACE, "Started process execute: %s", file_name);
+    // log(L_TRACE, "Started process execute: %s", file_name);
 
     /* Make a copy of FILE_NAME.
      * Otherwise there's a race between the caller and load(). */
@@ -115,25 +116,14 @@ start_process(void *file_name_)
     struct thread *cur = thread_current();
     struct thread *cur_parent = cur->parent;
 
-    // palloc_free_page(file_name);
-    // if (!success)
-    // {
-    //     cur->exit_code = -1;
-    //     cur->tid = -1;
-    //     thread_exit();
-    // }
-
     if (success)
     {
         palloc_free_page(file_name);
-        // struct file *ex = filesys_open(cur->executing_file);
-        // file_deny_write(ex);
         sema_up(&cur_parent->process_semma);
     }
     else
     {
         palloc_free_page(file_name);
-        // cur->exit_code = -1;
         cur->tid = -1;
         sema_up(&cur_parent->process_semma);
         thread_exit();
@@ -152,7 +142,7 @@ start_process(void *file_name_)
     NOT_REACHED();
 }
 /*
-This fumction is very experimental, not really sure how the list works
+This fumction returns true if a given tid is a child of the current thread
 
 */
 bool is_my_child(tid_t child_tid);
@@ -194,6 +184,7 @@ bool is_my_child(tid_t child_tid)
  * does nothing. */
 int process_wait(tid_t child_tid UNUSED)
 {
+    log(L_TRACE, "process_wait(child_tid: [%d])", child_tid);
     struct thread *thread_waited_on = find_thread_by_tid(child_tid);
 
     if (!is_my_child(child_tid) || thread_waited_on == NULL)
@@ -218,6 +209,7 @@ int process_wait(tid_t child_tid UNUSED)
 /* Free the current process's resources. */
 void process_exit(void)
 {
+    log(L_TRACE, "process_exit()");
     struct thread *cur = thread_current();
     uint32_t *pd;
     printf("%s: exit(%d)\n", cur->name, cur->exit_code);
@@ -379,8 +371,6 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     lock_release(&file_lock);
     if (file == NULL)
     {
-        // t->exit_code = 0;
-        // t->tid = -1;
         printf("load: %s: open failed\n", args[0]);
         goto done;
     }
@@ -470,8 +460,15 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     success = true;
 
 done:
+    if (success)
+    {
+        file_deny_write(file);
+        t->process_executing_file = file;
+        char *name = malloc(strlen(args[0]) + 1);
+        strlcpy(name, args[0], PGSIZE);
+        t->executing_file = name;
+    }
     /* We arrive here whether the load is successful or not. */
-    file_close(file);
     return success;
 }
 
