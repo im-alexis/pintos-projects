@@ -488,22 +488,20 @@ init_thread(struct thread *t, const char *name, int priority)
     */
 
     t->has_been_waited_on = false;
-    /* Don't know how to set up the descriptor table as of yet */
     for (int i = 2; i < 20; i++)
     {
-        t->file_descriptor_table[i] = NULL;
+        // t->file_descriptor_table[i] = NULL;
         t->file_descriptor_table_plus[i] = NULL;
-
-        // t->file_descriptor_table_plus[i]->writable = NULL;
     }
 
-    t->fdt_index = 2;
-    t->how_many_fd = 2;
+    // t->fdt_index = 2;
+    // t->how_many_fd = 2;
 
     t->fdt_index_plus = 2;
     t->how_many_fd_plus = 2;
     t->exit_code = -1;
     t->process_executing_file = NULL;
+    t->current_dir = NULL;
     // t->parent_executing_file = NULL;
 
     /*semephore initialiazation*/

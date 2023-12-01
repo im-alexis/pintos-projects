@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "synch.h"
 #include "filesys/file.h"
+#include "filesys/directory.h"
 
 // #include "filesys/experiment/file_plus.h"
 
@@ -91,6 +92,8 @@ struct file_plus
     struct file *file;
     char *name;
     bool writable;
+    char *path;
+    uint8_t isDir;
 };
 
 struct file_plus *create_file_plus(struct file *file, char *filename);
@@ -116,13 +119,11 @@ struct thread
     struct list_elem elem;          /* List element. */
     struct thread *parent;          /* The parant of this thread. */
     struct semaphore process_semma; /* Semaphore when calling start_process/process_execute combo. */
-
     void *stack_pointer;
-
     struct file *process_executing_file;
-    // struct file *parent_executing_file;
 
-    // struct Supplemental_Page_Table_Entry *entry; -> Don't think we need
+    /* FileSYS Stuff*/
+    struct dir *current_dir;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

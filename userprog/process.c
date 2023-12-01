@@ -23,6 +23,8 @@
 
 #include <log.h>
 
+#include "filesys/directory.h"
+
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
 
@@ -115,6 +117,16 @@ start_process(void *file_name_)
 
     struct thread *cur = thread_current();
     struct thread *cur_parent = cur->parent;
+    /* Set the child thread's current_dir to be the parent's if it is not null*/
+
+    if (cur_parent != NULL && cur_parent->current_dir != NULL)
+    {
+        cur->current_dir = dir_reopen(cur_parent->current_dir);
+    }
+    else
+    {
+        cur->current_dir = dir_open_root();
+    }
 
     if (success)
     {

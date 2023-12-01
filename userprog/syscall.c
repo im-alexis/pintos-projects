@@ -532,23 +532,45 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
     case SYS_CHDIR:
     {
+        /* This could be the only place to change directory */
+        log(L_TRACE, "SYS_CHDIR");
+        if (!valid_ptr_v2((const void *)arg0))
+            return;
+        char *dir = ((char *)*arg0);
         break;
     }
     case SYS_MKDIR:
     {
+        log(L_TRACE, "SYS_MKDIR");
+        if (!valid_ptr_v2((const void *)arg0))
+            return;
+        char *dir = ((char *)*arg0);
         break;
     }
     case SYS_READDIR:
     {
+        log(L_TRACE, "SYS_READDIR");
+        if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1))
+            return;
+        int fd = ((int)*arg0);
+        char *name = ((char *)*arg1);
         break;
     }
 
     case SYS_ISDIR:
     {
+        log(L_TRACE, "SYS_ISDIR");
+        if (!valid_ptr_v2((const void *)arg0))
+            return;
+        int fd = ((int)*arg0);
         break;
     }
     case SYS_INUMBER:
     {
+        log(L_TRACE, "SYS_INUMBER");
+        if (!valid_ptr_v2((const void *)arg0))
+            return;
+        int fd = ((int)*arg0);
         break;
     }
     default:

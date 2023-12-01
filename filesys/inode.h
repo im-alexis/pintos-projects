@@ -13,11 +13,13 @@ struct bitmap;
  * Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_disk
 {
-    /* This needs to be modified */
+
     block_sector_t start; /* First data sector. */
     off_t length;         /* File size in bytes. */
     unsigned magic;       /* Magic number. */
-    uint32_t unused[125]; /* Not used. */
+    uint8_t isDir;        /* Flag to note if regular file (0) or directory (1) */
+    uint32_t unused[124]; /* Not used. */
+                          /* ADD stuff for indexed and extensible files */
 };
 
 /* In-memory inode. */
