@@ -530,23 +530,28 @@ syscall_handler(struct intr_frame *f UNUSED)
 
         break;
     }
+    case SYS_CHDIR:
+    {
+        break;
+    }
+    case SYS_MKDIR:
+    {
+        break;
+    }
+    case SYS_READDIR:
+    {
+        break;
+    }
 
+    case SYS_ISDIR:
+    {
+        break;
+    }
+    case SYS_INUMBER:
+    {
+        break;
+    }
     default:
         break;
-
-        /*
-        DID NOT INCLUDES THESE Yet
-        Project 3 and optionally project 4.
-            SYS_MMAP,        Map a file into memory.
-            SYS_MUNMAP,  Remove a memory mapping.
-
-        Project 4 only.
-            SYS_CHDIR,   Change the current directory.
-            SYS_MKDIR,   Create a directory.
-            SYS_READDIR,  Reads a directory entry.
-            SYS_ISDIR,   Tests if a fd represents a directory.
-            SYS_INUMBER  Returns the inode number for a fd.
-
-        */
     }
 }
