@@ -55,6 +55,9 @@ void inode_init(void)
  * device.
  * Returns true if successful.
  * Returns false if memory or disk allocation fails. */
+/*
+? NEED A PARM or FUNC to Distinguish if Inode is Reg Files or Directory
+*/
 bool inode_create(block_sector_t sector, off_t length)
 {
     /*

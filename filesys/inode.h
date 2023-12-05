@@ -20,9 +20,9 @@ struct inode_disk
     /*
     ! Remove
     */
-    off_t length;         /* File size in bytes. (4 Bytes) */
-    unsigned magic;       /* Magic number.(4 Bytes) */
-    uint32_t unused[123]; /* Not used. (Each Number is 4 bytes)*/
+    off_t length;        /* File size in bytes. (4 Bytes) */
+    unsigned magic;      /* Magic number.(4 Bytes) */
+    uint8_t unused[499]; /* Not used. (Each Number is 4 bytes)*/
 
     /* Subdirectories*/
     bool isDir; /* Flag to note if regular file (0) or directory (1) | (1 Byte) */

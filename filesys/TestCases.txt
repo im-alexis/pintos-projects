@@ -5,6 +5,8 @@ FAIL tests/filesys/base/syn-read
 FAIL tests/filesys/base/syn-write
 
 FILESYS Testcases FAILED
+
+SUBDIRECTORIES TESTS
 FAIL tests/filesys/extended/dir-empty-name
 FAIL tests/filesys/extended/dir-mk-tree
 FAIL tests/filesys/extended/dir-mkdir
@@ -17,6 +19,8 @@ FAIL tests/filesys/extended/dir-rm-tree
 FAIL tests/filesys/extended/dir-rmdir
 FAIL tests/filesys/extended/dir-under-file
 FAIL tests/filesys/extended/dir-vine
+
+FILE GROWTH TESTS
 pass tests/filesys/extended/grow-create
 FAIL tests/filesys/extended/grow-dir-lg
 FAIL tests/filesys/extended/grow-file-size
@@ -28,6 +32,8 @@ FAIL tests/filesys/extended/grow-sparse
 FAIL tests/filesys/extended/grow-tell
 FAIL tests/filesys/extended/grow-two-files
 FAIL tests/filesys/extended/syn-rw
+
+PERSITANCE TESTS
 FAIL tests/filesys/extended/dir-empty-name-persistence
 FAIL tests/filesys/extended/dir-mk-tree-persistence
 FAIL tests/filesys/extended/dir-mkdir-persistence
