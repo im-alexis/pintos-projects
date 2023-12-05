@@ -6,20 +6,31 @@
 
 #include "devices/block.h"
 #include "filesys/off_t.h"
+#include "threads/thread.h"
 
 struct bitmap;
-
 /* On-disk inode.
- * Must be exactly BLOCK_SECTOR_SIZE bytes long. */
+ * Must be exactly BLOCK_SECTOR_SIZE (512 Bytes) bytes long. */
 struct inode_disk
 {
+    /*
+    ! Remove
+    */
+    block_sector_t start; /* First data sector. (4 Bytes) */
+    /*
+    ! Remove
+    */
+    off_t length;         /* File size in bytes. (4 Bytes) */
+    unsigned magic;       /* Magic number.(4 Bytes) */
+    uint32_t unused[123]; /* Not used. (Each Number is 4 bytes)*/
 
-    block_sector_t start; /* First data sector. */
-    off_t length;         /* File size in bytes. */
-    unsigned magic;       /* Magic number. */
-    uint8_t isDir;        /* Flag to note if regular file (0) or directory (1) */
-    uint32_t unused[124]; /* Not used. */
-                          /* ADD stuff for indexed and extensible files */
+    /* Subdirectories*/
+    bool isDir; /* Flag to note if regular file (0) or directory (1) | (1 Byte) */
+
+    /* Extensible Files, from the the VIDEO */
+    // block_sector_t direct_map_table[123]; /* Direct Mappings of blocks, max 124 blocks (496 Bytes)*/
+    // block_sector_t indirect_block_sec;                     /* Indirect mapping (4 Bytes)*/
+    // block_sector_t double_indirect_block_sec;              /* Double indirect mapping (4 Bytes)*/
 };
 
 /* In-memory inode. */
@@ -31,6 +42,7 @@ struct inode
     bool removed;           /* True if deleted, false otherwise. */
     int deny_write_cnt;     /* 0: writes ok, >0: deny writes. */
     struct inode_disk data; /* Inode content. */
+    struct lock lock;
 };
 
 void inode_init(void);

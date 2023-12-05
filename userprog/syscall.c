@@ -541,6 +541,9 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
     case SYS_MKDIR:
     {
+        /*
+        Somehow, add the current directory inode to position 1 and parent directory inode to position 2
+        */
         log(L_TRACE, "SYS_MKDIR");
         if (!valid_ptr_v2((const void *)arg0))
             return;

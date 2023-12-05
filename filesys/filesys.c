@@ -8,10 +8,26 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 
+#include "threads/thread.h"
+
 /* Partition that contains the file system. */
 struct block *fs_device;
 
 static void do_format(void);
+
+/*
+Given a pathname, opens the directory to that name.
+*/
+struct dir *parse_path_dir(char *pathname)
+{
+}
+
+/*
+Given a file and directory, opens the file to that name.
+*/
+struct file *dir_file_open(char *file_name, struct dir *directory)
+{
+}
 
 /* Initializes the file system module.
  * If FORMAT is true, reformats the file system. */
@@ -49,6 +65,7 @@ bool filesys_create(const char *name, off_t initial_size)
 {
     block_sector_t inode_sector = 0;
     struct dir *dir = dir_open_root();
+    // Need some directory parsing
     bool success = (dir != NULL && free_map_allocate(1, &inode_sector) && inode_create(inode_sector, initial_size) && dir_add(dir, name, inode_sector));
 
     if (!success && inode_sector != 0)
