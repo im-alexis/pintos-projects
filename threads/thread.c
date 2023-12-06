@@ -18,7 +18,7 @@
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
-
+#define LOGGING_LEVEL 6
 #include <log.h>
 
 /* Random value for struct thread's `magic' member.
@@ -218,9 +218,16 @@ tid_t thread_create(const char *name, int priority,
     sf->ebp = 0;
 
     if (thread_current()->current_dir)
+    {
+        log(L_DEBUG, "in thread_create(), thread getting parent directory");
         t->current_dir = dir_reopen(thread_current()->current_dir);
+    }
     else
+    {
+        log(L_DEBUG, "in thread_create(), thread getting NULL Directory");
         t->current_dir = NULL;
+    }
+
     /* Add to run queue. */
     thread_unblock(t);
 

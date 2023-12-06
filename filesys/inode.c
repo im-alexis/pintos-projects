@@ -6,6 +6,8 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#define LOGGING_LEVEL 6
+#include <log.h>
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -60,6 +62,7 @@ void inode_init(void)
 */
 bool inode_create(block_sector_t sector, off_t length, bool is_dir)
 {
+    log(L_TRACE, "inode_create(sector: [%d], length: [%d], is_dir [%d] )", sector, length, is_dir);
     /*
      * Modify, for file Extension
      */
@@ -81,9 +84,12 @@ bool inode_create(block_sector_t sector, off_t length, bool is_dir)
 
         //* ADDED
         disk_inode->isDir = is_dir;
-
+        /*
+        ! NEED THE NEW FILE FORMAT TO EFFECTIVELTY CONTINUE
+        */
         if (free_map_allocate(sectors, &disk_inode->start))
         {
+            log(L_DEBUG, "sectors: [%d]", sectors);
             block_write(fs_device, sector, disk_inode);
             if (sectors > 0)
             {
@@ -99,8 +105,10 @@ bool inode_create(block_sector_t sector, off_t length, bool is_dir)
             }
             free(disk_inode);
         }
+        log(L_DEBUG, "inode_creation_success_flag: [%d]", success);
         return success;
     }
+    log(L_ERROR, "inode is NULL");
 }
 
 /* Reads an inode from SECTOR

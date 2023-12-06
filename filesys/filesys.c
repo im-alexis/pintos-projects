@@ -23,9 +23,10 @@ Given a pathname, opens the directory to that name.
 struct dir *parse_path_dir(char *pathname)
 {
     log(L_TRACE, "parse_path_dir(pathname: [%s])", pathname);
-    int length = strlen(pathname);
-    char path[length + 1];
-    memcpy(path, pathname, length + 1);
+    int len = strlen(pathname);
+    char path[len + 1];
+    memcpy(path, pathname, len + 1);
+    // char *file_name;
 
     struct dir *dir;
     if (path[0] == '/' || !thread_current()->current_dir)
@@ -65,9 +66,13 @@ struct dir *parse_path_dir(char *pathname)
             dir = dir_open(inode);
         }
         else
+        {
+            // file_name = prev_str;
+            //  strcpy(filename, prev_str);
             inode_close(inode);
+        }
     }
-
+    // file_name = prev_str;
     return dir;
 }
 
@@ -76,6 +81,21 @@ Given a file and directory, opens the file to that name.
 */
 struct file *dir_file_open(char *file_name, struct dir *directory)
 {
+}
+
+char *get_filename(char *pathname)
+{
+    int len = strlen(pathname);
+    char path[len + 1];
+    memcpy(path, pathname, len + 1);
+
+    char *cur_str, *sav_ptr, *prev_str = "";
+    for (cur_str = strtok_r(path, "/", &sav_ptr); cur_str != NULL; cur_str = strtok_r(NULL, "/", &sav_ptr))
+        prev_str = cur_str;
+
+    char *name = malloc(strlen(prev_str) + 1);
+    memcpy(name, prev_str, strlen(prev_str) + 1);
+    return name;
 }
 
 /* Initializes the file system module.
@@ -112,19 +132,22 @@ void filesys_done(void)
  * or if internal memory allocation fails. */
 bool filesys_create(const char *name, off_t initial_size, bool is_dir)
 {
-    log(L_TRACE, "filesys_create(name: [%s], initial_size: [%d] )", name, initial_size);
+    log(L_TRACE, "filesys_create(name: [%s], initial_size: [%d], is_dir [%d] )", name, initial_size, is_dir);
     block_sector_t inode_sector = 0;
     // struct dir *dir = dir_open_root();
+    char *filename = get_filename(name);
     struct dir *dir = parse_path_dir(name);
-    bool success = (dir != NULL && free_map_allocate(1, &inode_sector) && inode_create(inode_sector, initial_size, is_dir) && dir_add(dir, name, inode_sector));
-    log(L_DEBUG, "success: [%d]", success);
+
+    log(L_DEBUG, "name: [%s] | filename: [%s] | dir: [%08x] ", name, filename, dir->inode);
+    bool success = (dir != NULL && free_map_allocate(1, &inode_sector) && inode_create(inode_sector, initial_size, is_dir) && dir_add(dir, filename, inode_sector));
 
     if (!success && inode_sector != 0)
     {
         free_map_release(inode_sector, 1);
     }
+    free(filename);
     dir_close(dir);
-
+    log(L_DEBUG, "file_creation_success_flag: [%d]", success);
     return success;
 }
 
@@ -136,13 +159,15 @@ bool filesys_create(const char *name, off_t initial_size, bool is_dir)
 struct file *
 filesys_open(const char *name)
 {
-    struct dir *dir = dir_open_root();
+    char *filename = get_filename(name);
+    struct dir *dir = parse_path_dir(name);
     struct inode *inode = NULL;
 
     if (dir != NULL)
     {
-        dir_lookup(dir, name, &inode);
+        dir_lookup(dir, filename, &inode);
     }
+    free(filename);
     dir_close(dir);
 
     return file_open(inode);
@@ -154,11 +179,12 @@ filesys_open(const char *name)
  * or if an internal memory allocation fails. */
 bool filesys_remove(const char *name)
 {
-    struct dir *dir = dir_open_root();
-    bool success = dir != NULL && dir_remove(dir, name);
+    char *filename = get_filename(name);
+    struct dir *dir = parse_path_dir(name);
+    bool success = dir != NULL && dir_remove(dir, filename);
 
     dir_close(dir);
-
+    free(filename);
     return success;
 }
 

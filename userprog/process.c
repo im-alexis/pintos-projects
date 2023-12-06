@@ -132,7 +132,10 @@ start_process(void *file_name_)
         thread_exit();
     }
     if (!thread_current()->current_dir)
+    {
+        log(L_DEBUG, "in start_process(), thread getting root directory");
         thread_current()->current_dir = dir_open_root();
+    }
 
     /* Start the user process by simulating a return from an
      * interrupt, implemented by intr_exit (in

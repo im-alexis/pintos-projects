@@ -6,6 +6,8 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 
+#define LOGGING_LEVEL 6
+#include <log.h>
 static struct file *free_map_file; /* Free map file. */
 static struct bitmap *free_map;    /* Free map, one bit per sector. */
 
@@ -28,6 +30,7 @@ void free_map_init(void)
  * written. */
 bool free_map_allocate(size_t cnt, block_sector_t *sectorp)
 {
+    log(L_TRACE, "free_map_allocate(cnt: [%d], sectorp: [%08x])", cnt, sectorp);
     block_sector_t sector = bitmap_scan_and_flip(free_map, 0, cnt, false);
 
     if (sector != BITMAP_ERROR && free_map_file != NULL && !bitmap_write(free_map, free_map_file))
