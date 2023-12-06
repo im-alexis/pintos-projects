@@ -62,7 +62,7 @@ void inode_init(void)
 */
 bool inode_create(block_sector_t sector, off_t length, bool is_dir)
 {
-    log(L_TRACE, "inode_create(sector: [%d], length: [%d], is_dir [%d] )", sector, length, is_dir);
+    log(L_TRACE, "inode_create(sector: [%d], length: [%d], is_dir [%d])", sector, length, is_dir);
     /*
      * Modify, for file Extension
      */
@@ -84,9 +84,6 @@ bool inode_create(block_sector_t sector, off_t length, bool is_dir)
 
         //* ADDED
         disk_inode->isDir = is_dir;
-        /*
-        ! NEED THE NEW FILE FORMAT TO EFFECTIVELTY CONTINUE
-        */
         if (free_map_allocate(sectors, &disk_inode->start))
         {
             log(L_DEBUG, "sectors: [%d]", sectors);
@@ -100,16 +97,9 @@ bool inode_create(block_sector_t sector, off_t length, bool is_dir)
                 {
                     block_write(fs_device, disk_inode->start + i, zeros);
                 }
-
                 success = true;
             }
             free(disk_inode);
-        }
-        if (is_dir)
-        {
-            /*
-           IF we go with having the directory entries. I think this is where you would set it up
-            */
         }
         log(L_DEBUG, "inode_creation_success_flag: [%d]", success);
         return success;
@@ -280,6 +270,8 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
 off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size,
                      off_t offset)
 {
+    log(L_TRACE, "inode_write_at(inode: [%08x],size: [%d], ... , offset: [%d]) | isDir[%d] | sector#: [%d] | start: [%d] && length: [%d]", inode, size, offset, inode->data.isDir, inode->sector, inode->data.start, inode->data.length);
+
     /*
      * Modify, for file Extension
      * should handle extension of file
@@ -349,7 +341,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size,
         bytes_written += chunk_size;
     }
     free(bounce);
-
+    // log(L_DEBUG, "bytes written: [%d]", bytes_written);
     return bytes_written;
 }
 

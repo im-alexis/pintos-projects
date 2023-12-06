@@ -7,6 +7,9 @@
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 
+#define LOGGING_LEVEL 6
+#include <log.h>
+
 /* Creates a directory with space for ENTRY_CNT entries in the
  * given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create(block_sector_t sector, size_t entry_cnt)
@@ -134,6 +137,7 @@ bool dir_lookup(const struct dir *dir, const char *name,
  * error occurs. */
 bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector)
 {
+    log(L_TRACE, "dir_add(dir: [%08x], name: [%s], inode_sector [%d] )", dir->inode, name, inode_sector);
     struct dir_entry e;
     off_t ofs;
     bool success = false;
@@ -150,9 +154,9 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector)
     /* Check that NAME is not in use. */
     if (lookup(dir, name, NULL, NULL))
     {
+        log(L_ERROR, "name: [%s] is taken", name);
         goto done;
     }
-
     /* Set OFS to offset of free slot.
      * If there are no free slots, then it will be set to the
      * current end-of-file.
@@ -176,9 +180,24 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector)
     success = inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
 
 done:
+    log(L_DEBUG, "dir_add success : [%d]", success);
     return success;
 }
+bool dir_is_empty(struct inode *inode)
+{
+    struct dir_entry e;
+    off_t pos = 0;
 
+    while (inode_read_at(inode, &e, sizeof e, pos) == sizeof e)
+    {
+        pos += sizeof e;
+        if (e.in_use)
+        {
+            return false;
+        }
+    }
+    return true;
+}
 /* Removes any entry for NAME in DIR.
  * Returns true if successful, false on failure,
  * which occurs only if there is no file with the given NAME. */
@@ -204,7 +223,9 @@ bool dir_remove(struct dir *dir, const char *name)
     {
         goto done;
     }
-
+    /* Is dir empty? */
+    if (inode->data.isDir && !dir_is_empty(inode))
+        goto done;
     /* Erase directory entry. */
     e.in_use = false;
     if (inode_write_at(dir->inode, &e, sizeof e, ofs) != sizeof e)
@@ -238,4 +259,15 @@ bool dir_readdir(struct dir *dir, char name[NAME_MAX + 1])
         }
     }
     return false;
+}
+
+/*
+Returns true or false if a give directory is the root directory
+*/
+bool is_root_dir(struct dir *dir)
+{
+    if (dir != NULL && inode_get_inumber(dir_get_inode(dir)) == ROOT_DIR_SECTOR)
+        return true;
+    else
+        return false;
 }

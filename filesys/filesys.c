@@ -33,20 +33,20 @@ struct dir *parse_path_dir(char *pathname)
     {
         /* If the string starts w/ '/' then is an abs path */
         dir = dir_open_root();
-        log(L_DEBUG, "using root directory [%08x]", dir->inode);
+        log(L_INFO, "using root directory [%08x]", dir->inode);
     }
     else
     {
         /* else its a relative path */
         dir = dir_reopen(thread_current()->current_dir);
-        log(L_DEBUG, "using current directory [%08x]", dir->inode);
+        log(L_INFO, "using current directory [%08x]", dir->inode);
     }
 
     char *cur_str, *sav_ptr, *prev_str;
     prev_str = strtok_r(path, "/", &sav_ptr);
     for (cur_str = strtok_r(NULL, "/", &sav_ptr); cur_str != NULL; prev_str = cur_str, cur_str = strtok_r(NULL, "/", &sav_ptr))
     {
-        log(L_DEBUG, "prev_str: [%s])", prev_str);
+        log(L_DEBUG, "prev_str: [%s]", prev_str);
         struct inode *inode;
         if (!strcmp(prev_str, "."))
             continue; /* Its a path staring from the current directory, keep looking*/
@@ -196,6 +196,46 @@ bool filesys_chdir(const char *name)
 {
     char *filename = get_filename(name);
     struct dir *dir = parse_path_dir(name);
+    struct thread *cur = thread_current();
+
+    struct inode *inode = NULL;
+
+    if (dir == NULL)
+    {
+        free(filename);
+        return false;
+    }
+    // special case: go to parent dir
+    else if (!strcmp(filename, ".."))
+    {
+    }
+    // special case: current dir
+    else if (!strcmp(filename, ".") || (strlen(filename) == 0 && is_root_dir(dir)))
+    {
+        cur->current_dir = dir;
+        free(filename);
+        return true;
+    }
+    else
+        dir_lookup(dir, filename, &inode);
+
+    dir_close(dir);
+
+    // now open up target dir
+    dir = dir_open(inode);
+
+    if (dir == NULL)
+    {
+        free(filename);
+        return false;
+    }
+    else
+    {
+        dir_close(cur->current_dir);
+        cur->current_dir = dir;
+        free(filename);
+        return true;
+    }
 }
 /* Formats the file system. */
 static void

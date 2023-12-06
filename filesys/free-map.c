@@ -30,7 +30,6 @@ void free_map_init(void)
  * written. */
 bool free_map_allocate(size_t cnt, block_sector_t *sectorp)
 {
-    log(L_TRACE, "free_map_allocate(cnt: [%d], sectorp: [%08x])", cnt, sectorp);
     block_sector_t sector = bitmap_scan_and_flip(free_map, 0, cnt, false);
 
     if (sector != BITMAP_ERROR && free_map_file != NULL && !bitmap_write(free_map, free_map_file))
@@ -42,6 +41,7 @@ bool free_map_allocate(size_t cnt, block_sector_t *sectorp)
     {
         *sectorp = sector;
     }
+    log(L_DEBUG, "free_map_allocated sector #: [%d] | sectorp [%d]", sector, *sectorp);
     return sector != BITMAP_ERROR;
 }
 

@@ -217,7 +217,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     */
     case SYS_CREATE:
     {
-        log(L_TRACE, "SYS_CREATE");
+
         if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1))
             return;
 
@@ -228,6 +228,14 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         }
         unsigned size = ((unsigned)*arg1);
+        /*
+        !  TEMPORARY FIX, REMOVE IF STATEMENT when file growth is available
+        */
+        if (size < 512)
+        {
+            size = 512;
+        }
+        log(L_TRACE, "SYS_CREATE (file: [%s], size: [%d])", file, size);
         lock_acquire(&file_lock);
         f->eax = filesys_create(file, size, false);
         lock_release(&file_lock);
@@ -235,7 +243,6 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
     case SYS_OPEN:
     {
-        log(L_TRACE, "SYS_OPEN");
         if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1))
             return;
 
@@ -245,7 +252,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             matelo();
             return;
         }
-
+        log(L_TRACE, "SYS_OPEN(file: [%s])", file);
         /*
         & NEW VERSION
          */
@@ -279,12 +286,12 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_REMOVE:
     {
-        log(L_TRACE, "SYS_REMOVE");
 
         if (!valid_ptr_v2((const void *)arg0))
             return;
 
         char *name = ((const char *)*arg0);
+        log(L_TRACE, "SYS_REMOVE(file_name: [%s])", name);
         /*
         & NEW VERSION
         */
@@ -304,11 +311,10 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_FILESIZE: // file_length();
     {
-        log(L_TRACE, "SYS_FILESIZE");
-
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int fd = ((int)*arg0);
+        log(L_TRACE, "SYS_FILESIZE(fd: [%d])", fd);
         if ((fd != STDIN_FILENO) && (fd != STDOUT_FILENO))
         {
             struct file_plus *t = cur->file_descriptor_table_plus[fd];
@@ -330,7 +336,6 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_READ: // validate with write check index [0] and [size-1] -> put_user()
     {
-        log(L_TRACE, "SYS_READ");
         if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1) || !valid_ptr_v2((const void *)arg2))
             return;
 
@@ -339,7 +344,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         off_t size = (off_t)*arg2;
         if (!check_buffer(*arg1, *arg2))
             return;
-
+        log(L_TRACE, "SYS_READ(fd: [%d], size: [%d])", fd, size);
         if (fd == STDOUT_FILENO || fd >= MAX_FD) // check fd table is valid, make sure buffer is a valid pointer, check the size is greater than 0
         {
             matelo();
@@ -404,13 +409,18 @@ syscall_handler(struct intr_frame *f UNUSED)
             }
             char *cur_exec_filename = cur->executing_file;
             char *parent_exec_filename = cur->parent->executing_file;
-            log(L_DEBUG, "cur_exec: [%s] | parent_exec: [%s] | filename [%s]", cur_exec_filename, parent_exec_filename, t->name);
-            log(L_DEBUG, "Comp1 Result: [%d] | Comp2 Result: [%d]", strcmp(cur_exec_filename, t->name), strcmp(parent_exec_filename, t->name));
+            // log(L_DEBUG, "cur_exec: [%s] | parent_exec: [%s] | filename [%s]", cur_exec_filename, parent_exec_filename, t->name);
+            // log(L_DEBUG, "Comp1 Result: [%d] | Comp2 Result: [%d]", strcmp(cur_exec_filename, t->name), strcmp(parent_exec_filename, t->name));
             if (!strcmp(cur_exec_filename, t->name) || !strcmp(parent_exec_filename, t->name))
             {
                 log(L_ERROR, "Tried to write to ELF file");
                 f->eax = 0;
                 return;
+            }
+            if (target->inode->data.isDir)
+            {
+                matelo();
+                break;
             }
             lock_acquire(&file_lock);
             if (!target->deny_write)
@@ -423,12 +433,12 @@ syscall_handler(struct intr_frame *f UNUSED)
     case SYS_SEEK: // file_seek()
     {
 
-        log(L_TRACE, "SYS_SEEK");
         if (!valid_ptr_v2((const void *)arg0) || !valid_ptr_v2((const void *)arg1))
             return;
 
         int fd = ((int)*arg0);
         unsigned size = (unsigned)*arg1;
+        log(L_TRACE, "SYS_SEEK(fd: [%d], size[%d])", fd, size);
         if (fd == STDIN_FILENO)
         {
             // need to get the file for stdin
@@ -461,10 +471,10 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_TELL: // file_tell();
     {
-        log(L_TRACE, "SYS_TELL");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int fd = ((int)*arg0);
+        log(L_TRACE, "SYS_TELL(fd: [%d])", fd);
         if (fd == STDIN_FILENO)
         {
             // need to get the file for stdin
@@ -501,10 +511,10 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_CLOSE: // file_close()
     {
-        log(L_TRACE, "SYS_CLOSE");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int fd = ((int)*arg0);
+        log(L_TRACE, "SYS_CLOSE(fd: [%d])", fd);
         if (fd == NULL || fd == STDOUT_FILENO || fd == STDIN_FILENO || fd >= MAX_FD)
         {
             matelo();
@@ -533,30 +543,40 @@ syscall_handler(struct intr_frame *f UNUSED)
     case SYS_CHDIR:
     {
         /* This could be the only place to change directory */
-        log(L_TRACE, "SYS_CHDIR");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         char *dir = ((char *)*arg0);
+        log(L_TRACE, "SYS_CHDIR(dir: [\"%s\"])", dir);
+        if (dir == NULL)
+        {
+            matelo();
+            return;
+        }
+
         f->eax = filesys_chdir(dir); /* Function is a work in progress*/
         break;
     }
     case SYS_MKDIR:
     {
-        /*
-        Somehow, add the current directory inode to position 1 and parent directory inode to position 2
-        */
-        // log(L_TRACE, "SYS_MKDIR");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         char *dir = ((char *)*arg0);
         log(L_TRACE, "SYS_MKDIR(dir: [\"%s\"])", dir);
+        if (dir == NULL)
+        {
+            matelo();
+            return;
+        }
 
         if (!strcmp(dir, ""))
         {
             log(L_DEBUG, "Directory Path is empty");
             f->eax = false;
         }
-        f->eax = filesys_create(dir, 0, true);
+        /*
+        ! Making 512 (Block Size) for now, but change back to zero when file growth is available
+        */
+        f->eax = filesys_create(dir, 512, true);
         break;
     }
     case SYS_READDIR:
@@ -566,6 +586,12 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         int fd = ((int)*arg0);
         char *name = ((char *)*arg1);
+        if (name == NULL)
+        {
+            matelo();
+            return;
+        }
+        log(L_TRACE, "SYS_READDIR(fd: [%d), name: [%s]", fd, name);
         f->eax = false;
         if (fd >= MAX_FD || fd < 0)
         {
@@ -595,10 +621,10 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     case SYS_ISDIR:
     {
-        log(L_TRACE, "SYS_ISDIR");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int fd = ((int)*arg0);
+        log(L_TRACE, "SYS_ISDIR(fd: [%d])", fd);
         if (fd >= MAX_FD || fd < 0)
         {
             matelo();
@@ -622,10 +648,10 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
     case SYS_INUMBER:
     {
-        log(L_TRACE, "SYS_INUMBER");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int fd = ((int)*arg0);
+        log(L_TRACE, "SYS_INUMBER(fd: [%d])", fd);
         if (fd >= MAX_FD || fd < 0)
         {
             matelo();
