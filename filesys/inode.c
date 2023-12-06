@@ -105,6 +105,12 @@ bool inode_create(block_sector_t sector, off_t length, bool is_dir)
             }
             free(disk_inode);
         }
+        if (is_dir)
+        {
+            /*
+           IF we go with having the directory entries. I think this is where you would set it up
+            */
+        }
         log(L_DEBUG, "inode_creation_success_flag: [%d]", success);
         return success;
     }

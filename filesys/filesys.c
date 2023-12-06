@@ -188,6 +188,15 @@ bool filesys_remove(const char *name)
     return success;
 }
 
+/*
+* Given a file_name/path change the directory
+ WORK IN PROGRESS
+*/
+bool filesys_chdir(const char *name)
+{
+    char *filename = get_filename(name);
+    struct dir *dir = parse_path_dir(name);
+}
 /* Formats the file system. */
 static void
 do_format(void)

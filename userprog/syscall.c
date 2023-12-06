@@ -537,6 +537,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         if (!valid_ptr_v2((const void *)arg0))
             return;
         char *dir = ((char *)*arg0);
+        f->eax = filesys_chdir(dir); /* Function is a work in progress*/
         break;
     }
     case SYS_MKDIR:
@@ -555,6 +556,7 @@ syscall_handler(struct intr_frame *f UNUSED)
             log(L_DEBUG, "Directory Path is empty");
             f->eax = false;
         }
+        f->eax = filesys_create(dir, 0, true);
         break;
     }
     case SYS_READDIR:
@@ -564,6 +566,30 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         int fd = ((int)*arg0);
         char *name = ((char *)*arg1);
+        f->eax = false;
+        if (fd >= MAX_FD || fd < 0)
+        {
+            matelo();
+            break;
+        }
+        struct file_plus *t = cur->file_descriptor_table_plus[fd];
+        if (t == NULL)
+        {
+            matelo();
+            break;
+        }
+        struct file *target = t->file;
+        if (target == NULL)
+        {
+            matelo();
+            break;
+        }
+        if (target->inode->data.isDir)
+        {
+            struct dir *dir = (struct dir *)target;
+            f->eax = dir_readdir(dir, name);
+        }
+
         break;
     }
 
@@ -573,6 +599,25 @@ syscall_handler(struct intr_frame *f UNUSED)
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int fd = ((int)*arg0);
+        if (fd >= MAX_FD || fd < 0)
+        {
+            matelo();
+            break;
+        }
+        struct file_plus *t = cur->file_descriptor_table_plus[fd];
+        if (t == NULL)
+        {
+            matelo();
+            break;
+        }
+        struct file *target = t->file;
+        if (target == NULL)
+        {
+            matelo();
+            break;
+        }
+
+        f->eax = target->inode->data.isDir;
         break;
     }
     case SYS_INUMBER:
@@ -581,6 +626,24 @@ syscall_handler(struct intr_frame *f UNUSED)
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int fd = ((int)*arg0);
+        if (fd >= MAX_FD || fd < 0)
+        {
+            matelo();
+            break;
+        }
+        struct file_plus *t = cur->file_descriptor_table_plus[fd];
+        if (t == NULL)
+        {
+            matelo();
+            break;
+        }
+        struct file *target = t->file;
+        if (target == NULL)
+        {
+            matelo();
+            break;
+        }
+        f->eax = target->inode;
         break;
     }
     default:
