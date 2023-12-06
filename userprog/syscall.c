@@ -229,7 +229,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         unsigned size = ((unsigned)*arg1);
         lock_acquire(&file_lock);
-        f->eax = filesys_create(file, size);
+        f->eax = filesys_create(file, size, false);
         lock_release(&file_lock);
         break;
     }
@@ -544,10 +544,17 @@ syscall_handler(struct intr_frame *f UNUSED)
         /*
         Somehow, add the current directory inode to position 1 and parent directory inode to position 2
         */
-        log(L_TRACE, "SYS_MKDIR");
+        // log(L_TRACE, "SYS_MKDIR");
         if (!valid_ptr_v2((const void *)arg0))
             return;
         char *dir = ((char *)*arg0);
+        log(L_TRACE, "SYS_MKDIR(dir: [\"%s\"])", dir);
+
+        if (!strcmp(dir, ""))
+        {
+            log(L_DEBUG, "Directory Path is empty");
+            f->eax = false;
+        }
         break;
     }
     case SYS_READDIR:

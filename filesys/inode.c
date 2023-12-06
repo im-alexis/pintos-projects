@@ -58,7 +58,7 @@ void inode_init(void)
 /*
 ? NEED A PARM or FUNC to Distinguish if Inode is Reg Files or Directory
 */
-bool inode_create(block_sector_t sector, off_t length)
+bool inode_create(block_sector_t sector, off_t length, bool is_dir)
 {
     /*
      * Modify, for file Extension
@@ -78,7 +78,10 @@ bool inode_create(block_sector_t sector, off_t length)
         size_t sectors = bytes_to_sectors(length);
         disk_inode->length = length;
         disk_inode->magic = INODE_MAGIC;
-        // disk_inode->isDir = is_dir; //* Might need later on
+
+        //* ADDED
+        disk_inode->isDir = is_dir;
+
         if (free_map_allocate(sectors, &disk_inode->start))
         {
             block_write(fs_device, sector, disk_inode);

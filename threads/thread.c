@@ -217,6 +217,10 @@ tid_t thread_create(const char *name, int priority,
     sf->eip = switch_entry;
     sf->ebp = 0;
 
+    if (thread_current()->current_dir)
+        t->current_dir = dir_reopen(thread_current()->current_dir);
+    else
+        t->current_dir = NULL;
     /* Add to run queue. */
     thread_unblock(t);
 
@@ -501,7 +505,9 @@ init_thread(struct thread *t, const char *name, int priority)
     t->how_many_fd_plus = 2;
     t->exit_code = -1;
     t->process_executing_file = NULL;
-    t->current_dir = NULL;
+    // ADDED
+    // inherit parent working dir
+
     // t->parent_executing_file = NULL;
 
     /*semephore initialiazation*/

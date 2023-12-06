@@ -19,8 +19,8 @@
 #include "userprog/process.h"
 #include "userprog/tss.h"
 #include "lib/kernel/list.h"
-#define LOGGING_LEVEL 6
 
+#define LOGGING_LEVEL 6
 #include <log.h>
 
 #include "filesys/directory.h"
@@ -104,7 +104,7 @@ start_process(void *file_name_)
     struct intr_frame if_;
     bool success;
 
-    log(L_TRACE, "start_process()");
+    log(L_TRACE, "start_process(file_name: [%s])", file_name);
 
     /* Initialize interrupt frame and load executable. */
     memset(&if_, 0, sizeof if_);
@@ -119,15 +119,6 @@ start_process(void *file_name_)
     struct thread *cur_parent = cur->parent;
     /* Set the child thread's current_dir to be the parent's if it is not null*/
 
-    if (cur_parent != NULL && cur_parent->current_dir != NULL)
-    {
-        cur->current_dir = dir_reopen(cur_parent->current_dir);
-    }
-    else
-    {
-        cur->current_dir = dir_open_root();
-    }
-
     if (success)
     {
         palloc_free_page(file_name);
@@ -140,6 +131,8 @@ start_process(void *file_name_)
         sema_up(&cur_parent->process_semma);
         thread_exit();
     }
+    if (!thread_current()->current_dir)
+        thread_current()->current_dir = dir_open_root();
 
     /* Start the user process by simulating a return from an
      * interrupt, implemented by intr_exit (in

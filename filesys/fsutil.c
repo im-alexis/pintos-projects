@@ -13,18 +13,19 @@
 #include "threads/vaddr.h"
 
 /* List files in the root directory. */
-void
-fsutil_ls(char **argv UNUSED)
+void fsutil_ls(char **argv UNUSED)
 {
     struct dir *dir;
     char name[NAME_MAX + 1];
 
     printf("Files in the root directory:\n");
     dir = dir_open_root();
-    if (dir == NULL) {
+    if (dir == NULL)
+    {
         PANIC("root dir open failed");
     }
-    while (dir_readdir(dir, name)) {
+    while (dir_readdir(dir, name))
+    {
         printf("%s\n", name);
     }
     dir_close(dir);
@@ -33,8 +34,7 @@ fsutil_ls(char **argv UNUSED)
 
 /* Prints the contents of file ARGV[1] to the system console as
  * hex and ASCII. */
-void
-fsutil_cat(char **argv)
+void fsutil_cat(char **argv)
 {
     const char *file_name = argv[1];
 
@@ -43,14 +43,17 @@ fsutil_cat(char **argv)
 
     printf("Printing '%s' to the console...\n", file_name);
     file = filesys_open(file_name);
-    if (file == NULL) {
+    if (file == NULL)
+    {
         PANIC("%s: open failed", file_name);
     }
     buffer = palloc_get_page(PAL_ASSERT);
-    for (;;) {
+    for (;;)
+    {
         off_t pos = file_tell(file);
         off_t n = file_read(file, buffer, PGSIZE);
-        if (n == 0) {
+        if (n == 0)
+        {
             break;
         }
 
@@ -61,21 +64,20 @@ fsutil_cat(char **argv)
 }
 
 /* Deletes file ARGV[1]. */
-void
-fsutil_rm(char **argv)
+void fsutil_rm(char **argv)
 {
     const char *file_name = argv[1];
 
     printf("Deleting '%s'...\n", file_name);
-    if (!filesys_remove(file_name)) {
+    if (!filesys_remove(file_name))
+    {
         PANIC("%s: delete failed\n", file_name);
     }
 }
 
 /* Extracts a ustar-format tar archive from the scratch block
  * device into the Pintos file system. */
-void
-fsutil_extract(char **argv UNUSED)
+void fsutil_extract(char **argv UNUSED)
 {
     static block_sector_t sector = 0;
 
@@ -85,20 +87,23 @@ fsutil_extract(char **argv UNUSED)
     /* Allocate buffers. */
     header = malloc(BLOCK_SECTOR_SIZE);
     data = malloc(BLOCK_SECTOR_SIZE);
-    if (header == NULL || data == NULL) {
+    if (header == NULL || data == NULL)
+    {
         PANIC("couldn't allocate buffers");
     }
 
     /* Open source block device. */
     src = block_get_role(BLOCK_SCRATCH);
-    if (src == NULL) {
+    if (src == NULL)
+    {
         PANIC("couldn't open scratch device");
     }
 
     printf("Extracting ustar archive from scratch device "
            "into file system...\n");
 
-    for (;;) {
+    for (;;)
+    {
         const char *file_name;
         const char *error;
         enum ustar_type type;
@@ -107,36 +112,46 @@ fsutil_extract(char **argv UNUSED)
         /* Read and parse ustar header. */
         block_read(src, sector++, header);
         error = ustar_parse_header(header, &file_name, &type, &size);
-        if (error != NULL) {
-            PANIC("bad ustar header in sector %"PRDSNu " (%s)", sector - 1, error);
+        if (error != NULL)
+        {
+            PANIC("bad ustar header in sector %" PRDSNu " (%s)", sector - 1, error);
         }
 
-        if (type == USTAR_EOF) {
+        if (type == USTAR_EOF)
+        {
             /* End of archive. */
             break;
-        } else if (type == USTAR_DIRECTORY) {
+        }
+        else if (type == USTAR_DIRECTORY)
+        {
             printf("ignoring directory %s\n", file_name);
-        } else if (type == USTAR_REGULAR) {
+        }
+        else if (type == USTAR_REGULAR)
+        {
             struct file *dst;
 
             printf("Putting '%s' into the file system...\n", file_name);
 
             /* Create destination file. */
-            if (!filesys_create(file_name, size)) {
+            if (!filesys_create(file_name, size, false))
+            {
                 PANIC("%s: create failed", file_name);
             }
             dst = filesys_open(file_name);
-            if (dst == NULL) {
+            if (dst == NULL)
+            {
                 PANIC("%s: open failed", file_name);
             }
 
             /* Do copy. */
-            while (size > 0) {
+            while (size > 0)
+            {
                 int chunk_size = (size > BLOCK_SECTOR_SIZE
-                                ? BLOCK_SECTOR_SIZE
-                                : size);
+                                      ? BLOCK_SECTOR_SIZE
+                                      : size);
                 block_read(src, sector++, data);
-                if (file_write(dst, data, chunk_size) != chunk_size) {
+                if (file_write(dst, data, chunk_size) != chunk_size)
+                {
                     PANIC("%s: write failed with %d bytes unwritten",
                           file_name, size);
                 }
@@ -169,8 +184,7 @@ fsutil_extract(char **argv UNUSED)
  * the device.  This position is independent of that used for
  * fsutil_extract(), so `extract' should precede all
  * `append's. */
-void
-fsutil_append(char **argv)
+void fsutil_append(char **argv)
 {
     static block_sector_t sector = 0;
 
@@ -184,37 +198,44 @@ fsutil_append(char **argv)
 
     /* Allocate buffer. */
     buffer = malloc(BLOCK_SECTOR_SIZE);
-    if (buffer == NULL) {
+    if (buffer == NULL)
+    {
         PANIC("couldn't allocate buffer");
     }
 
     /* Open source file. */
     src = filesys_open(file_name);
-    if (src == NULL) {
+    if (src == NULL)
+    {
         PANIC("%s: open failed", file_name);
     }
     size = file_length(src);
 
     /* Open target block device. */
     dst = block_get_role(BLOCK_SCRATCH);
-    if (dst == NULL) {
+    if (dst == NULL)
+    {
         PANIC("couldn't open scratch device");
     }
 
     /* Write ustar header to first sector. */
-    if (!ustar_make_header(file_name, USTAR_REGULAR, size, buffer)) {
+    if (!ustar_make_header(file_name, USTAR_REGULAR, size, buffer))
+    {
         PANIC("%s: name too long for ustar format", file_name);
     }
     block_write(dst, sector++, buffer);
 
     /* Do copy. */
-    while (size > 0) {
+    while (size > 0)
+    {
         int chunk_size = size > BLOCK_SECTOR_SIZE ? BLOCK_SECTOR_SIZE : size;
-        if (sector >= block_size(dst)) {
+        if (sector >= block_size(dst))
+        {
             PANIC("%s: out of space on scratch device", file_name);
         }
-        if (file_read(src, buffer, chunk_size) != chunk_size) {
-            PANIC("%s: read failed with %"PROTd " bytes unread", file_name, size);
+        if (file_read(src, buffer, chunk_size) != chunk_size)
+        {
+            PANIC("%s: read failed with %" PROTd " bytes unread", file_name, size);
         }
         memset(buffer + chunk_size, 0, BLOCK_SECTOR_SIZE - chunk_size);
         block_write(dst, sector++, buffer);

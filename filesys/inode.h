@@ -22,7 +22,7 @@ struct inode_disk
     */
     off_t length;        /* File size in bytes. (4 Bytes) */
     unsigned magic;      /* Magic number.(4 Bytes) */
-    uint8_t unused[499]; /* Not used. (Each Number is 4 bytes)*/
+    uint8_t unused[499]; /* Not used. (Each Number is 1 byte)*/
 
     /* Subdirectories*/
     bool isDir; /* Flag to note if regular file (0) or directory (1) | (1 Byte) */
@@ -46,7 +46,7 @@ struct inode
 };
 
 void inode_init(void);
-bool inode_create(block_sector_t, off_t);
+bool inode_create(block_sector_t, off_t, bool is_dir);
 struct inode *inode_open(block_sector_t);
 struct inode *inode_reopen(struct inode *);
 block_sector_t inode_get_inumber(const struct inode *);
