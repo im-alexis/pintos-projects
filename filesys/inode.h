@@ -43,6 +43,7 @@ struct inode
     int deny_write_cnt;     /* 0: writes ok, >0: deny writes. */
     struct inode_disk data; /* Inode content. */
     struct lock lock;
+    block_sector_t parent_sector; /* the parent of this sector */
 };
 
 void inode_init(void);
@@ -57,5 +58,9 @@ off_t inode_write_at(struct inode *, const void *, off_t size, off_t offset);
 void inode_deny_write(struct inode *);
 void inode_allow_write(struct inode *);
 off_t inode_length(const struct inode *);
+
+/* NEW FUNCTIONS*/
+block_sector_t get_inode_parent(const struct inode *inode);
+bool set_inode_parent(block_sector_t parent, block_sector_t child);
 
 #endif /* filesys/inode.h */

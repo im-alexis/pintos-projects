@@ -270,7 +270,7 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
 off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size,
                      off_t offset)
 {
-    log(L_TRACE, "inode_write_at(inode: [%08x],size: [%d], ... , offset: [%d]) | isDir[%d] | sector#: [%d] | start: [%d] && length: [%d]", inode, size, offset, inode->data.isDir, inode->sector, inode->data.start, inode->data.length);
+    // log(L_TRACE, "inode_write_at(inode: [%08x],size: [%d], ... , offset: [%d]) | isDir[%d] | sector#: [%d] | start: [%d] && length: [%d]", inode, size, offset, inode->data.isDir, inode->sector, inode->data.start, inode->data.length);
 
     /*
      * Modify, for file Extension
@@ -367,4 +367,26 @@ void inode_allow_write(struct inode *inode)
 off_t inode_length(const struct inode *inode)
 {
     return inode->data.length;
+}
+
+/*
+Given an inode, it return the parent sector of an inode. ie like the parent directory
+*/
+block_sector_t get_inode_parent(const struct inode *inode)
+{
+    return inode->parent_sector;
+}
+
+/*
+Sets the parent blocks for an inode
+*/
+bool set_inode_parent(block_sector_t parent, block_sector_t child)
+{
+    struct inode *inode = inode_open(child);
+    if (!inode)
+        return false;
+
+    inode->parent_sector = parent;
+    inode_close(inode);
+    return true;
 }

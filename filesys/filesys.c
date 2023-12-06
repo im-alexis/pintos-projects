@@ -52,10 +52,16 @@ struct dir *parse_path_dir(char *pathname)
             continue; /* Its a path staring from the current directory, keep looking*/
         else if (!strcmp(prev_str, ".."))
         {
-            /*
-             Its looking for the parent of the current directory
-             & NEED A FUNCTION TO GET A PARENT DIRECTORY INODE
-            */
+            /* Check if the directory is NULL */
+            if (dir == NULL)
+                return NULL;
+            /* open the inode of the parent sector*/
+            block_sector_t parent_sector = dir->inode->parent_sector;
+            inode = inode_open(parent_sector);
+            if (inode == NULL)
+            {
+                return NULL;
+            }
         }
         else if (!dir_lookup(dir, prev_str, &inode)) /* Look to see if the directory exist*/
             return NULL;
@@ -138,6 +144,13 @@ bool filesys_create(const char *name, off_t initial_size, bool is_dir)
     char *filename = get_filename(name);
     struct dir *dir = parse_path_dir(name);
 
+    /* If the directory is in use maybe*/
+    if (dir->inode->removed)
+    {
+        log(L_ERROR, "Directory was remove, cannot create the file");
+        return false;
+    }
+
     log(L_DEBUG, "name: [%s] | filename: [%s] | dir: [%08x] ", name, filename, dir->inode);
     bool success = (dir != NULL && free_map_allocate(1, &inode_sector) && inode_create(inode_sector, initial_size, is_dir) && dir_add(dir, filename, inode_sector));
 
@@ -159,17 +172,26 @@ bool filesys_create(const char *name, off_t initial_size, bool is_dir)
 struct file *
 filesys_open(const char *name)
 {
+    log(L_TRACE, "filesys_open(name: [%s])", name);
     char *filename = get_filename(name);
     struct dir *dir = parse_path_dir(name);
     struct inode *inode = NULL;
-
-    if (dir != NULL)
+    bool val = false;
+    // log(L_DEBUG, "filename: [%s] | dir: [%08x]", filename, dir->inode);
+    if (dir != NULL && strcmp(filename, ""))
     {
-        dir_lookup(dir, filename, &inode);
+        val = dir_lookup(dir, filename, &inode);
+        dir_close(dir);
+        free(filename);
     }
-    free(filename);
-    dir_close(dir);
+    else if (dir != NULL && !strcmp(filename, ""))
+    {
+        log(L_INFO, "Opening the directory itself");
+        free(filename);
+        return file_open(dir->inode);
+    }
 
+    log(L_INFO, "Opening a file/Directory in a directory | dir_lookup_result: [%d]", val);
     return file_open(inode);
 }
 
@@ -194,6 +216,7 @@ bool filesys_remove(const char *name)
 */
 bool filesys_chdir(const char *name)
 {
+    log(L_TRACE, "filesys_chdir(name: [%s])", name);
     char *filename = get_filename(name);
     struct dir *dir = parse_path_dir(name);
     struct thread *cur = thread_current();
@@ -205,11 +228,22 @@ bool filesys_chdir(const char *name)
         free(filename);
         return false;
     }
-    // special case: go to parent dir
+    /* Special Case: use the parent directory */
     else if (!strcmp(filename, ".."))
     {
+        /* Check if the directory is NULL */
+        if (dir == NULL)
+            return NULL;
+        /* open the inode of the parent sector*/
+        block_sector_t parent_sector = dir->inode->parent_sector;
+        inode = inode_open(parent_sector);
+        if (inode == NULL)
+        {
+            free(name);
+            return false;
+        }
     }
-    // special case: current dir
+    /* Special Case: use the current directory */
     else if (!strcmp(filename, ".") || (strlen(filename) == 0 && is_root_dir(dir)))
     {
         cur->current_dir = dir;

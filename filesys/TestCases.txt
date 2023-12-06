@@ -10,7 +10,6 @@ NEW
 
 
 SUBDIRECTORIES TESTS
-FAIL tests/filesys/extended/dir-rm-cwd
 FAIL tests/filesys/extended/dir-vine
 
 FILE GROWTH TESTS
@@ -53,7 +52,7 @@ FAIL tests/filesys/extended/syn-rw-persistence
 OTHER
 FAIL tests/filesys/extended/syn-rw
 
-CURRENT TESTCASES SCORE (Total                                                  47.9%/100.0%)
+CURRENT TESTCASES SCORE (Total                                                  52.4%/100.0%)
 pass tests/userprog/args-none
 pass tests/userprog/args-single
 pass tests/userprog/args-multiple
@@ -129,20 +128,18 @@ pass tests/filesys/base/sm-seq-random
 FAIL tests/filesys/base/syn-read
 pass tests/filesys/base/syn-remove
 FAIL tests/filesys/base/syn-write
-
 pass tests/filesys/extended/dir-empty-name
 pass tests/filesys/extended/dir-mk-tree
 pass tests/filesys/extended/dir-mkdir
 pass tests/filesys/extended/dir-open
 pass tests/filesys/extended/dir-over-file
-FAIL tests/filesys/extended/dir-rm-cwd
+pass tests/filesys/extended/dir-rm-cwd
 pass tests/filesys/extended/dir-rm-parent
 pass tests/filesys/extended/dir-rm-root
 pass tests/filesys/extended/dir-rm-tree
 pass tests/filesys/extended/dir-rmdir
 pass tests/filesys/extended/dir-under-file
 FAIL tests/filesys/extended/dir-vine
-
 FAIL tests/filesys/extended/grow-create
 FAIL tests/filesys/extended/grow-dir-lg
 FAIL tests/filesys/extended/grow-file-size
@@ -153,9 +150,7 @@ FAIL tests/filesys/extended/grow-seq-sm
 FAIL tests/filesys/extended/grow-sparse
 FAIL tests/filesys/extended/grow-tell
 FAIL tests/filesys/extended/grow-two-files
-
 FAIL tests/filesys/extended/syn-rw
-
 FAIL tests/filesys/extended/dir-empty-name-persistence
 FAIL tests/filesys/extended/dir-mk-tree-persistence
 FAIL tests/filesys/extended/dir-mkdir-persistence
@@ -179,4 +174,4 @@ FAIL tests/filesys/extended/grow-sparse-persistence
 FAIL tests/filesys/extended/grow-tell-persistence
 FAIL tests/filesys/extended/grow-two-files-persistence
 FAIL tests/filesys/extended/syn-rw-persistence
-40 of 121 tests failed.
+39 of 121 tests failed.

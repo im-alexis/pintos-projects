@@ -247,9 +247,9 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
 
         char *file = ((const char *)*arg0);
-        if (file == NULL)
+        if (!strcmp(file, ""))
         {
-            matelo();
+            f->eax = -1;
             return;
         }
         log(L_TRACE, "SYS_OPEN(file: [%s])", file);
@@ -262,6 +262,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
         if (opened_file == NULL)
         {
+            log(L_ERROR, "Could not open the file: [%s]", file);
             f->eax = -1;
             return;
         }
@@ -275,6 +276,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else
         {
+            log(L_INFO, "File: [%s] was successfully created", file);
             f->eax = add_to_table_plus(pfile);
             break;
         }
@@ -387,6 +389,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         bool result = valid_ptr(&buffer, -1, (int)size, 0);
         if (fd == STDIN_FILENO || fd >= MAX_FD || !result)
         {
+            log(L_ERROR, "Tried to write STDIN");
             f->eax = 0;
             matelo();
             return;
@@ -404,6 +407,8 @@ syscall_handler(struct intr_frame *f UNUSED)
             struct file *target = t->file;
             if (target == NULL)
             {
+                f->eax = 0;
+                log(L_ERROR, "File is empty");
                 matelo();
                 return;
             }
@@ -419,6 +424,8 @@ syscall_handler(struct intr_frame *f UNUSED)
             }
             if (target->inode->data.isDir)
             {
+                log(L_ERROR, "Tried to write to directory");
+                f->eax = 0;
                 matelo();
                 break;
             }

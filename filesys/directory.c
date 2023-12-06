@@ -6,7 +6,6 @@
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
-
 #define LOGGING_LEVEL 6
 #include <log.h>
 
@@ -157,6 +156,13 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector)
         log(L_ERROR, "name: [%s] is taken", name);
         goto done;
     }
+
+    /* Sets the directory as the parent_sector of the inode being added to this directory */
+    if (!set_inode_parent(inode_get_inumber(dir_get_inode(dir)), inode_sector))
+    {
+        log(L_ERROR, "Could not set the parent_sector sector");
+        goto done;
+    }
     /* Set OFS to offset of free slot.
      * If there are no free slots, then it will be set to the
      * current end-of-file.
@@ -226,6 +232,7 @@ bool dir_remove(struct dir *dir, const char *name)
     /* Is dir empty? */
     if (inode->data.isDir && !dir_is_empty(inode))
         goto done;
+
     /* Erase directory entry. */
     e.in_use = false;
     if (inode_write_at(dir->inode, &e, sizeof e, ofs) != sizeof e)
