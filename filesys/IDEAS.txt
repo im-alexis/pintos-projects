@@ -1,0 +1,26 @@
+Large Files
+You will notice that the current file allocation procedure is simple: a. All file sizes are fixed at creation 
+time (no growth) b. All blocks that make up a file are contiguous. bool free_map_allocate (size_t, block_sector_t *); 
+takes how many sectors you want and returns the first sector of that many contiguous sectors on the disk. That is why, 
+the inode structure simply keeps track of this first sector:
+
+struct inode_disk { block_sector_t start; /* First data sector. */
+… uint32_t unused[125]; /* Not used. */ };
+This needs to change so you can keep track of the sectors that the file is made of. This requires implementing 
+a multi-level indexing mechanism with direct pointers, indirect pointer blocks, and double-indirect pointer blocks. 
+You can use the unused field for this.
+
+File Growth
+Files can grow dynamically. Writing at a position past EOF, extends the file to the position being written, 
+and any gap between the previous EOF and the start of the write must be filled with zeros. Seeking past the 
+end of the file must be allowed, however you can delay the growth and filling of zeros until a write is performed. 
+Note, the position inside the file where the read/write is being performed is not a member of the (in memory) inode 
+structure. It is part of the struct file structure.
+
+NEED TO DO
+Modify  bool free_map_allocate (size_t, block_sector_t *) to just get what ever is available first
+
+INODE SETUP ()
+direct pointers 
+indirect pointer blocks 
+double-indirect pointer blocks.

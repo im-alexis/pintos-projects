@@ -24,6 +24,10 @@ bytes_to_sectors(off_t size)
  * within INODE.
  * Returns -1 if INODE does not contain data for a byte at offset
  * POS. */
+
+/*
+& NEEDS TO CHANGE, for file growth
+*/
 static block_sector_t
 byte_to_sector(const struct inode *inode, off_t pos)
 {
@@ -58,7 +62,7 @@ void inode_init(void)
  * Returns true if successful.
  * Returns false if memory or disk allocation fails. */
 /*
-? NEED A PARM or FUNC to Distinguish if Inode is Reg Files or Directory
+& NEEDS TO CHANGE, for file growth
 */
 bool inode_create(block_sector_t sector, off_t length, bool is_dir)
 {
@@ -141,6 +145,7 @@ inode_open(block_sector_t sector)
     inode->open_cnt = 1;
     inode->deny_write_cnt = 0;
     inode->removed = false;
+    lock_init(&inode->lock);
     block_read(fs_device, inode->sector, &inode->data);
     return inode;
 }
@@ -155,7 +160,9 @@ inode_reopen(struct inode *inode)
     }
     return inode;
 }
-
+/*
+& NEEDS TO CHANGE, for file growth
+*/
 /* Returns INODE's inode number. */
 block_sector_t
 inode_get_inumber(const struct inode *inode)

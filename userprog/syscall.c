@@ -324,7 +324,8 @@ syscall_handler(struct intr_frame *f UNUSED)
             if (target != NULL)
             {
                 lock_acquire(&file_lock);
-                f->eax = file_length(target);
+                int val = file_length(target);
+                f->eax = val;
                 lock_release(&file_lock);
             }
         }

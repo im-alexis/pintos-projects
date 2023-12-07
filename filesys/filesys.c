@@ -158,6 +158,12 @@ bool filesys_create(const char *name, off_t initial_size, bool is_dir)
     {
         free_map_release(inode_sector, 1);
     }
+    // if (is_dir)
+    // {
+    /* Trying to add the "." and ".." to the directory, not sure if totally needed*/
+    //     dir_add();
+    //     dir_add();
+    // }
     free(filename);
     dir_close(dir);
     log(L_DEBUG, "file_creation_success_flag: [%d]", success);

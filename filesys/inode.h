@@ -8,42 +8,51 @@
 #include "filesys/off_t.h"
 #include "threads/thread.h"
 
+#define NUMBER_DIRECT_BLOCKS 123
+#define NUMBER_INDIRECT_BLOCKS_PER_SECTOR 128
+
 struct bitmap;
 /* On-disk inode.
- * Must be exactly BLOCK_SECTOR_SIZE (512 Bytes) bytes long. */
+ * Must be exactly BLOCK_SECTOR_SIZE (512 Bytes) bytes long.
+ & FOR A MAX OF 8MB file need 16384 sectors
+ */
 struct inode_disk
 {
     /*
-    ! Remove
+    ! Remove start, when ready, increase 122 to 123 in the direct_map_table
     */
     block_sector_t start; /* First data sector. (4 Bytes) */
-    /*
-    ! Remove
-    */
-    off_t length;        /* File size in bytes. (4 Bytes) */
-    unsigned magic;      /* Magic number.(4 Bytes) */
-    uint8_t unused[499]; /* Not used. (Each Number is 1 byte)*/
+
+    off_t length;      /* File size in bytes. (4 Bytes) */
+    unsigned magic;    /* Magic number.(4 Bytes) */
+    uint8_t unused[3]; /* Not used. (Each Number is 1 byte)*/
 
     /* Subdirectories*/
     bool isDir; /* Flag to note if regular file (0) or directory (1) | (1 Byte) */
 
     /* Extensible Files, from the the VIDEO */
-    // block_sector_t direct_map_table[123]; /* Direct Mappings of blocks, max 124 blocks (496 Bytes)*/
-    // block_sector_t indirect_block_sec;                     /* Indirect mapping (4 Bytes)*/
-    // block_sector_t double_indirect_block_sec;              /* Double indirect mapping (4 Bytes)*/
+    block_sector_t direct_map_table[NUMBER_DIRECT_BLOCKS]; /* Direct Mappings of blocks, max 123 blocks/sectors (492 Bytes)*/
+    block_sector_t indirect_block_sec;                     /* Indirect mapping (4 Bytes) */
+                                                           // block_sector_t double_indirect_block_sec;              /* Double indirect mapping (4 Bytes) */
 };
 
 /* In-memory inode. */
 struct inode
 {
-    struct list_elem elem;  /* Element in inode list. */
-    block_sector_t sector;  /* Sector number of disk location. */
-    int open_cnt;           /* Number of openers. */
-    bool removed;           /* True if deleted, false otherwise. */
-    int deny_write_cnt;     /* 0: writes ok, >0: deny writes. */
-    struct inode_disk data; /* Inode content. */
-    struct lock lock;
+    struct list_elem elem;        /* Element in inode list. */
+    block_sector_t sector;        /* Sector number of disk location. */
+    int open_cnt;                 /* Number of openers. */
+    bool removed;                 /* True if deleted, false otherwise. */
+    int deny_write_cnt;           /* 0: writes ok, >0: deny writes. */
+    struct inode_disk data;       /* Inode content. */
+    struct lock lock;             /* A lock to sync per file, instead of per */
     block_sector_t parent_sector; /* the parent of this sector */
+};
+
+/* Indirect Block, points to other sectors */
+struct indirect_block
+{
+    block_sector_t blocks[NUMBER_INDIRECT_BLOCKS_PER_SECTOR];
 };
 
 void inode_init(void);
