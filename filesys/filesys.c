@@ -82,13 +82,6 @@ struct dir *parse_path_dir(char *pathname)
     return dir;
 }
 
-/*
-Given a file and directory, opens the file to that name.
-*/
-struct file *dir_file_open(char *file_name, struct dir *directory)
-{
-}
-
 char *get_filename(char *pathname)
 {
     int len = strlen(pathname);

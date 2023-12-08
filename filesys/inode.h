@@ -10,6 +10,7 @@
 
 #define NUMBER_DIRECT_BLOCKS 123
 #define NUMBER_INDIRECT_BLOCKS_PER_SECTOR 128
+#define NUMBER_BLOCKS_D_INDIRECT 16384
 
 struct bitmap;
 /* On-disk inode.
@@ -21,7 +22,7 @@ struct inode_disk
     /*
     ! Remove start, when ready, increase 122 to 123 in the direct_map_table
     */
-    block_sector_t start; /* First data sector. (4 Bytes) */
+    // block_sector_t start; /* First data sector. (4 Bytes) */
 
     off_t length;      /* File size in bytes. (4 Bytes) */
     unsigned magic;    /* Magic number.(4 Bytes) */
@@ -33,7 +34,7 @@ struct inode_disk
     /* Extensible Files, from the the VIDEO */
     block_sector_t direct_map_table[NUMBER_DIRECT_BLOCKS]; /* Direct Mappings of blocks, max 123 blocks/sectors (492 Bytes)*/
     block_sector_t indirect_block_sec;                     /* Indirect mapping (4 Bytes) */
-                                                           // block_sector_t double_indirect_block_sec;              /* Double indirect mapping (4 Bytes) */
+    block_sector_t double_indirect_block_sec;              /* Double indirect mapping (4 Bytes) */
 };
 
 /* In-memory inode. */

@@ -3,56 +3,29 @@ Previous Project
 OLD (Kinda Expected)
 FAIL tests/userprog/rox-child
 FAIL tests/userprog/rox-multichild
-FAIL tests/filesys/base/syn-read
-FAIL tests/filesys/base/syn-write
+FAIL tests/filesys/base/syn-read -> Worked once, It's Unstable
+FAIL tests/filesys/base/syn-write -> Worked once, It's Unstable
 
 NEW
-
 
 SUBDIRECTORIES TESTS
 FAIL tests/filesys/extended/dir-vine
 
 FILE GROWTH TESTS
-FAIL tests/filesys/extended/grow-create
-FAIL tests/filesys/extended/grow-dir-lg
-FAIL tests/filesys/extended/grow-file-size
-FAIL tests/filesys/extended/grow-root-lg
-FAIL tests/filesys/extended/grow-root-sm
-FAIL tests/filesys/extended/grow-seq-lg
-FAIL tests/filesys/extended/grow-seq-sm
-FAIL tests/filesys/extended/grow-sparse
-FAIL tests/filesys/extended/grow-tell
-FAIL tests/filesys/extended/grow-two-files
+
 
 PERSITANCE TESTS
-FAIL tests/filesys/extended/dir-empty-name-persistence
 FAIL tests/filesys/extended/dir-mk-tree-persistence
-FAIL tests/filesys/extended/dir-mkdir-persistence
-FAIL tests/filesys/extended/dir-open-persistence
-FAIL tests/filesys/extended/dir-over-file-persistence
-FAIL tests/filesys/extended/dir-rm-cwd-persistence
-FAIL tests/filesys/extended/dir-rm-parent-persistence
-FAIL tests/filesys/extended/dir-rm-root-persistence
-FAIL tests/filesys/extended/dir-rm-tree-persistence
-FAIL tests/filesys/extended/dir-rmdir-persistence
-FAIL tests/filesys/extended/dir-under-file-persistence
 FAIL tests/filesys/extended/dir-vine-persistence
-FAIL tests/filesys/extended/grow-create-persistence
 FAIL tests/filesys/extended/grow-dir-lg-persistence
-FAIL tests/filesys/extended/grow-file-size-persistence
 FAIL tests/filesys/extended/grow-root-lg-persistence
-FAIL tests/filesys/extended/grow-root-sm-persistence
 FAIL tests/filesys/extended/grow-seq-lg-persistence
-FAIL tests/filesys/extended/grow-seq-sm-persistence
 FAIL tests/filesys/extended/grow-sparse-persistence
-FAIL tests/filesys/extended/grow-tell-persistence
-FAIL tests/filesys/extended/grow-two-files-persistence
 FAIL tests/filesys/extended/syn-rw-persistence
 
 OTHER
-FAIL tests/filesys/extended/syn-rw
 
-CURRENT TESTCASES SCORE (Total                                                  52.4%/100.0%)
+CURRENT TESTCASES SCORE (Total                                                  83.5%/100.0%)
 pass tests/userprog/args-none
 pass tests/userprog/args-single
 pass tests/userprog/args-multiple
@@ -140,38 +113,38 @@ pass tests/filesys/extended/dir-rm-tree
 pass tests/filesys/extended/dir-rmdir
 pass tests/filesys/extended/dir-under-file
 FAIL tests/filesys/extended/dir-vine
-FAIL tests/filesys/extended/grow-create
-FAIL tests/filesys/extended/grow-dir-lg
-FAIL tests/filesys/extended/grow-file-size
-FAIL tests/filesys/extended/grow-root-lg
-FAIL tests/filesys/extended/grow-root-sm
-FAIL tests/filesys/extended/grow-seq-lg
-FAIL tests/filesys/extended/grow-seq-sm
-FAIL tests/filesys/extended/grow-sparse
-FAIL tests/filesys/extended/grow-tell
-FAIL tests/filesys/extended/grow-two-files
-FAIL tests/filesys/extended/syn-rw
-FAIL tests/filesys/extended/dir-empty-name-persistence
+pass tests/filesys/extended/grow-create
+pass tests/filesys/extended/grow-dir-lg
+pass tests/filesys/extended/grow-file-size
+pass tests/filesys/extended/grow-root-lg
+pass tests/filesys/extended/grow-root-sm
+pass tests/filesys/extended/grow-seq-lg
+pass tests/filesys/extended/grow-seq-sm
+pass tests/filesys/extended/grow-sparse
+pass tests/filesys/extended/grow-tell
+pass tests/filesys/extended/grow-two-files
+pass tests/filesys/extended/syn-rw
+pass tests/filesys/extended/dir-empty-name-persistence
 FAIL tests/filesys/extended/dir-mk-tree-persistence
-FAIL tests/filesys/extended/dir-mkdir-persistence
-FAIL tests/filesys/extended/dir-open-persistence
-FAIL tests/filesys/extended/dir-over-file-persistence
-FAIL tests/filesys/extended/dir-rm-cwd-persistence
-FAIL tests/filesys/extended/dir-rm-parent-persistence
-FAIL tests/filesys/extended/dir-rm-root-persistence
-FAIL tests/filesys/extended/dir-rm-tree-persistence
-FAIL tests/filesys/extended/dir-rmdir-persistence
-FAIL tests/filesys/extended/dir-under-file-persistence
+pass tests/filesys/extended/dir-mkdir-persistence
+pass tests/filesys/extended/dir-open-persistence
+pass tests/filesys/extended/dir-over-file-persistence
+pass tests/filesys/extended/dir-rm-cwd-persistence
+pass tests/filesys/extended/dir-rm-parent-persistence
+pass tests/filesys/extended/dir-rm-root-persistence
+pass tests/filesys/extended/dir-rm-tree-persistence
+pass tests/filesys/extended/dir-rmdir-persistence
+pass tests/filesys/extended/dir-under-file-persistence
 FAIL tests/filesys/extended/dir-vine-persistence
-FAIL tests/filesys/extended/grow-create-persistence
+pass tests/filesys/extended/grow-create-persistence
 FAIL tests/filesys/extended/grow-dir-lg-persistence
-FAIL tests/filesys/extended/grow-file-size-persistence
+pass tests/filesys/extended/grow-file-size-persistence
 FAIL tests/filesys/extended/grow-root-lg-persistence
-FAIL tests/filesys/extended/grow-root-sm-persistence
+pass tests/filesys/extended/grow-root-sm-persistence
 FAIL tests/filesys/extended/grow-seq-lg-persistence
-FAIL tests/filesys/extended/grow-seq-sm-persistence
+pass tests/filesys/extended/grow-seq-sm-persistence
 FAIL tests/filesys/extended/grow-sparse-persistence
-FAIL tests/filesys/extended/grow-tell-persistence
-FAIL tests/filesys/extended/grow-two-files-persistence
+pass tests/filesys/extended/grow-tell-persistence
+pass tests/filesys/extended/grow-two-files-persistence
 FAIL tests/filesys/extended/syn-rw-persistence
-39 of 121 tests failed.
+12 of 121 tests failed.

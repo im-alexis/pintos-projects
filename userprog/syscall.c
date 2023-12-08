@@ -185,7 +185,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         if (!valid_ptr_v2((const void *)arg0))
             return;
         int exit_code = ((int)*arg0);
-        cur->exit_code = ((int)*arg0);
+        cur->exit_code = exit_code;
         // close_thread_files();
         thread_exit();
         break;
@@ -228,17 +228,10 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         }
         unsigned size = ((unsigned)*arg1);
-        /*
-        !  TEMPORARY FIX, REMOVE IF STATEMENT when file growth is available
-        */
-        if (size < 512)
-        {
-            size = 512;
-        }
         log(L_TRACE, "SYS_CREATE (file: [%s], size: [%d])", file, size);
-        lock_acquire(&file_lock);
+
         f->eax = filesys_create(file, size, false);
-        lock_release(&file_lock);
+
         break;
     }
     case SYS_OPEN:
@@ -253,12 +246,8 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         }
         log(L_TRACE, "SYS_OPEN(file: [%s])", file);
-        /*
-        & NEW VERSION
-         */
-        lock_acquire(&file_lock);
+
         struct file *opened_file = filesys_open(file);
-        lock_release(&file_lock);
 
         if (opened_file == NULL)
         {
@@ -280,10 +269,6 @@ syscall_handler(struct intr_frame *f UNUSED)
             f->eax = add_to_table_plus(pfile);
             break;
         }
-
-        /*
-        & NEW VERSION
-        */
     }
 
     case SYS_REMOVE:
@@ -294,17 +279,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
         char *name = ((const char *)*arg0);
         log(L_TRACE, "SYS_REMOVE(file_name: [%s])", name);
-        /*
-        & NEW VERSION
-        */
-
-        lock_acquire(&file_lock);
         f->eax = filesys_remove(name);
-        lock_release(&file_lock);
-
-        /*
-       & NEW VERSION
-       */
 
         break;
     }
@@ -397,9 +372,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         else if (fd == STDOUT_FILENO)
         {
-            lock_acquire(&file_lock);
             putbuf(buffer, size); // writes to the console
-            lock_release(&file_lock);
             f->eax = size;
         }
         else
@@ -430,10 +403,7 @@ syscall_handler(struct intr_frame *f UNUSED)
                 matelo();
                 break;
             }
-            lock_acquire(&file_lock);
-            if (!target->deny_write)
-                f->eax = file_write(target, buffer, size);
-            lock_release(&file_lock);
+            f->eax = file_write(target, buffer, size);
         }
 
         break;
@@ -446,20 +416,10 @@ syscall_handler(struct intr_frame *f UNUSED)
 
         int fd = ((int)*arg0);
         unsigned size = (unsigned)*arg1;
-        log(L_TRACE, "SYS_SEEK(fd: [%d], size[%d])", fd, size);
-        if (fd == STDIN_FILENO)
+        log(L_TRACE, "SYS_SEEK(fd:[%d], pos:[%d])", fd, size);
+        if (fd == STDIN_FILENO || fd == STDOUT_FILENO)
         {
-            // need to get the file for stdin
-            lock_acquire(&file_lock);
-            // call file_seek()
-            lock_release(&file_lock);
-        }
-        else if (fd == STDOUT_FILENO)
-        {
-            // need to get the file for stdout
-            lock_acquire(&file_lock);
-            // call file_seek()
-            lock_release(&file_lock);
+            break;
         }
         else
         {
@@ -468,9 +428,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
             if (target != NULL)
             {
-                lock_acquire(&file_lock);
                 file_seek(target, size);
-                lock_release(&file_lock);
             }
         }
 
@@ -483,30 +441,17 @@ syscall_handler(struct intr_frame *f UNUSED)
             return;
         int fd = ((int)*arg0);
         log(L_TRACE, "SYS_TELL(fd: [%d])", fd);
-        if (fd == STDIN_FILENO)
+        if (fd == STDIN_FILENO || fd == STDOUT_FILENO)
         {
-            // need to get the file for stdin
-            lock_acquire(&file_lock);
-            // call file_tell()
-            lock_release(&file_lock);
-        }
-        else if (fd == STDOUT_FILENO)
-        {
-            // need to get the file for stdout
-            lock_acquire(&file_lock);
-            // call file_tell()
-            lock_release(&file_lock);
+            break;
         }
         else
         {
-
             struct file_plus *t = cur->file_descriptor_table_plus[fd];
             struct file *target = t->file;
             if (target != NULL)
             {
-                lock_acquire(&file_lock);
                 f->eax = file_tell(target);
-                lock_release(&file_lock);
             }
             else
             {
@@ -539,9 +484,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
             if (target != NULL)
             {
-                lock_acquire(&file_lock);
                 file_close(target);
-                lock_release(&file_lock);
                 removed_from_table_plus(fd);
             }
         }
@@ -581,10 +524,8 @@ syscall_handler(struct intr_frame *f UNUSED)
             log(L_DEBUG, "Directory Path is empty");
             f->eax = false;
         }
-        /*
-        ! Making 512 (Block Size) for now, but change back to zero when file growth is available
-        */
-        f->eax = filesys_create(dir, 512, true);
+
+        f->eax = filesys_create(dir, 0, true);
         break;
     }
     case SYS_READDIR:
